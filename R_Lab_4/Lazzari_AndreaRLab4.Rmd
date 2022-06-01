@@ -1,0 +1,578 @@
+---
+title: "R Laboratory 4"
+output: html_notebook
+---
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(gridExtra)
+library(stringr)
+
+```
+
+
+## Exercise 1 - Community Mobility Open Data
+
+• Community Mobility Reports have been created with the aim to provide insights 
+into what has changed in response to policies aimed at combating COVID-19.
+Data can be found at https://www.google.com/covid19/mobility/
+
+• Download and analyze the following data sets:
+- https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv
+and
+- https://www.gstatic.com/covid19/mobility/Region_Mobility_Report_CSVs.zip
+
+The data show how visitors to (or time spent in) categorized places change 
+compared to baseline days. A baseline day represents a normal value for
+that day of the week. The baseline day is the median value from the 
+5-week period Jan 3 – Feb 6, 2020.
+
+To make the reports useful, categories have been used to group some 
+of the places with similar characteristics for purposes of social
+distancing guidance. The following categories are available:
+
+- retail and recreation, i.e. places like restaurants, cafes, shopping centers,
+theme parks,museums, libraries, and movie theaters
+
+- grocery and pharmacy, i.e. grocery markets, food warehouses, farmers markets, 
+specialty food shops, drug stores, and pharmacies
+
+- parks, i.e. national parks, public beaches, marinas, dog parks, 
+plazas, and public gardens 
+
+- transit stations i.e. all public transport hubs such as subway, bus,
+and train stations 
+
+- workplaces, i.e. places of work
+
+- residential, i.e. people’s residence
+
+• Select a couple of European countries of your choice and analyze the trends 
+in the previous variables over time:
+
+- produce a plot of the data by averaging the observable over a period of one
+week (hint: convert the data field to lubridate::week) and one month and 
+quantify the impact of COVID- 19 restrictions on mobility situations.
+
+
+```{r}
+df_glob <- read.csv('Global_Mobility_Report.csv')
+df_glob$week <- week(df_glob$date)
+df_glob$month <- month(df_glob$date)
+```
+
+
+
+
+```{r fig.align="center", fig.width=35 , fig.height=12}
+
+col <- colnames(df_glob)
+observables <- names(df_glob)[10:(length(col)-2)] #have to remove week and month                                                  columns added selecting the features 
+
+countries <- c('Italy', 'France', 'Portugal')
+
+pl_week <- function(feature){
+  plot <- ggplot() + theme_linedraw() +
+  geom_line(aes(x=ita_weekly$week, y=ita_weekly[[feature]], color='Italy'), lwd=1.8) +
+  geom_line(aes(x=fra_weekly$week, y=fra_weekly[[feature]], color='France'),lwd=1.8) +
+geom_line(aes(x=por_weekly$week, y=por_weekly[[feature]], color='Portugal'),lwd=1.8) +
+    labs(title=sprintf('Italy, France and Portugal -  Week comparison on %s', feature), color='Legend', x='Week', y='Precentual change') +
+    theme(plot.title = element_text(size=45),
+      axis.text.x = element_text(size=25),
+      axis.text.y = element_text(size=25),
+      axis.title.x = element_text(size=40),
+      axis.title.y = element_text(size=40),
+      axis.ticks.length=unit(.6, "cm"),
+      legend.text=element_text(size=35)) +                                             scale_x_continuous(breaks=1:53, labels=1:53) 
+  
+return(plot)
+}
+
+
+df_it <- df_glob[df_glob$country_region == countries[1],]
+df_fr <- df_glob[df_glob$country_region == countries[2],]
+df_por <- df_glob[df_glob$country_region == countries[3],]
+
+for (obs in observables){
+  ita_weekly <- summarise_at(group_by(df_it,week) , vars(obs) , funs(mean(. ,na.rm = TRUE) ))
+  fra_weekly <- summarise_at(group_by(df_fr,week) , vars(obs) , funs(mean(. ,na.rm = TRUE) ))
+  por_weekly <- summarise_at(group_by(df_por,week) , vars(obs) , funs(mean(. ,na.rm = TRUE) ))
+  
+  print(pl_week(feature = obs))
+}
+
+```
+Almost in all the plotted features/activities the virus forced a decreasing,
+while all the growths in these curves correspond to the re-openings in the
+periods when the Covid-19 was in reduction.
+
+
+```{r fig.align="center", fig.width=35 , fig.height=12}
+
+pl_month <- function(feature){
+
+  plot <- ggplot() + theme_linedraw() +
+     geom_line(aes(x=ita_monthly$month, y=ita_monthly[[feature]], 
+color='Italy'), lwd=1.5) +
+     geom_line(aes(x=fra_monthly$month, y=fra_monthly[[feature]], color='France'),lwd=1.5) +
+    geom_line(aes(x=por_monthly$month, y=por_monthly[[feature]], color='Portugal'),lwd=1.5) +
+    
+    labs(title=sprintf('Italy, France and Portugal - Month comparison on %s', feature), color='Legend', x='Month', y='Precentual change') +
+    
+    theme(plot.title = element_text(size=45),
+      axis.text.x = element_text(size=25),
+      axis.text.y = element_text(size=25),
+      axis.title.x = element_text(size=40),
+      axis.title.y = element_text(size=40),
+      axis.ticks.length=unit(.6, "cm"),
+      legend.text=element_text(size=35)) +                                             scale_x_continuous(breaks=1:12, labels=1:12)
+  
+return(plot)
+}
+
+for (obs in observables){
+  ita_monthly <- summarise_at(group_by(df_it,month) , vars(obs) , funs(mean(. ,na.rm = TRUE) ))
+  fra_monthly <- summarise_at(group_by(df_fr,month) , vars(obs) , funs(mean(. ,na.rm = TRUE) ))
+  por_monthly <- summarise_at(group_by(df_por,month) , vars(obs) , funs(mean(.,na.rm = TRUE) ))
+  
+  print(pl_month(feature=obs))
+}
+
+```
+Also in the monthly comparison the situation it is the same: the growths in these curves correspond to the periods when the Covid-19 was in reduction.
+
+
+## Exercise 2 - Random number generators
+
+
+• one of the first random number generator was proposed by von Neumann, the
+so-called middle square algorithm
+
+• write R code to implement this type of generator and, given a fixed 
+digit number input, square it an remove the leading and trailing digits, 
+in order to return a number with the same number of digits as the 
+original number
+
+• Suggestion : after having squared the number, convert it to a 
+list of characters (number <- unlist(strsplit(as.character(x.squared),""))) and,
+after having 
+removed the head and tail of the list, convert it back to a number
+(as.numeric(paste(number.after.trimming, collapse="")))
+
+```{r}
+n_num <- readline(prompt="Insert how many numbers you have to generate ")
+
+repeat{
+rand_num <- readline(prompt="Insert the seed of the generation (with almost 10 digits): ")
+rand_num <- as.numeric(rand_num)
+
+in_list <- unlist(strsplit(as.character(rand_num),""))
+if (length(in_list) < 10){cat("\n ERROR: The inserted number has NOT almost 10 digits:  ")}
+else{ break}
+  
+}
+
+results_df <- data.frame(0)
+colnames(results_df) <- c("Random_Number")
+
+for (n in seq(1:n_num)){
+  
+  sq_num <- rand_num^2
+  num_list <- unlist(strsplit(as.character(sq_num),""))
+  in_list <- unlist(strsplit(as.character(rand_num),""))
+  
+  #trimming phase
+
+  x <- (num_list[ (ceiling((length(num_list) - length(in_list))/2) + 1):(length(num_list) - floor((length(num_list) - length(in_list))/2)) ] )
+  
+  #Have to shift to the left if the number starts with a 0
+    i <- 1
+    while (x[1] == 0){
+      x <- (num_list[ (ceiling((length(num_list) - length(in_list))/2) + 1 - i):(length(num_list) - floor((length(num_list) - length(in_list))/2)-i)])
+        i <- i+1
+
+    }
+  
+  
+  rand_num <- as.numeric(paste(x, collapse=""))
+    
+    results_df[n,1] = rand_num
+}
+
+results_df
+
+
+
+
+
+
+
+```
+
+
+## Exercise 3 - Bayesian Inference
+
+• A publishing company has recently launched a new journal. In order
+to determine how effective it is in reaching its possible audience,
+a market survey company selects a random sample of people from a possible
+target audience and interviews them. 
+
+Out of 150 interviewed people, 29 have read the last issue of the journal.
+
+a) What kind of distribution would you assume for y, the number of people
+that have seen the last issue of the journal ?
+
+b) Assuming a uniform prior, what is the posterior distribution for y
+
+c) Plot both posterior and likelihood distributions functions
+
+
+For instance I can assume a Binomial distribution for $y$, 
+where the last issue is read with probability $p$ and 
+$1 - p$ for the opposite case.
+Considering $N$ interviewed people, I am looking to $k$ people that read 
+the last issue in $N$ Bernoulli trials, i.e. a likelihood like:
+
+$$
+P(y|N,p,M) = {N \choose y} \cdot p^y \cdot(1-p)^{n-y}
+$$
+If I assuming a Uniform Prior $U(0,1)$ the Posterior would be proportional to
+the previous likelihood ($Z$ is called Evidence)
+
+$$
+P(y|N,p,M) = \frac{ {N \choose y} \cdot p^y \cdot(1-p)^{n-y}}{Z}
+$$
+
+
+```{r fig.align="center", fig.width=7 , fig.height=5}
+
+N <- 150  #n_interviews
+y <- 29  #n_reads
+
+n_data <- 1000
+p = seq(0,1, length.out = n_data)
+
+
+#likelihood
+
+lk <- dbinom(y,N,p)
+
+plot1 <- ggplot() + theme_linedraw() + 
+       geom_line(aes(x=p, y=lk), color='darkorange1', lwd=1.5) +
+        ggtitle("Likelihood Function")+ labs( x='p', y='Probability Density') +                     theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+
+plot1
+
+#posterior with uniform prior
+post = lk*1
+
+#have to normalized
+posterior = post/sum(post/n_data)
+
+
+
+plot2 <- ggplot() + theme_linedraw() + 
+       geom_line(aes(x=p, y=posterior), color='steelblue3', lwd=1.5) +
+        ggtitle("Posterior Function")+ labs( x='p', y='Probability Density') +                     theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+
+plot2
+
+
+```
+
+
+## Exercise 4 - Bayesian Inference
+
+• A coin is flipped n = 30 times with the following outcomes:
+T, T, T, T, T, H, T, T, H, H, T, T, H, H, H, T, H, T, H, T, H, H, T, H, T, H,
+T, H, H, H
+
+a) Assuming a flat prior, and a beta prior, plot the likelihood, prior and
+posterior distributions for the data set.
+
+b) Evaluate the most probable value for the coin probability p and, integrating 
+the posterior probability distribution, give an estimate 
+for a 95% credibility interval.
+
+c) Repeat the same analysis assuming a sequential analysis of the data. 
+Show how the most probable value and the credibility interval change as a 
+function of the number of coin tosses (i.e. from 1 to 30).
+
+d) Do you get a different result, by analyzing the data sequentially
+with respect to a one-step analysis (i.e. considering all the data as a whole)?
+
+
+
+```{r fig.align="center", fig.width=20 , fig.height=7}
+
+outcomes <- c('T', 'T', 'T', 'T', 'T', 'H', 'T', 'T', 'H', 'H', 'T', 'T', 'H', 'H', 'H', 'T', 'H', 'T', 'H', 'T', 'H', 'H', 'T', 'H', 'T', 'H', 'T', 'H', 'H', 'H')
+
+n_times <- 30
+h <- 15  #also with str_count
+t <- n_times - h
+
+  
+n_data <- 1000
+p = seq(0,1, length.out = n_data)
+
+#priors
+alpha <- 50
+beta <- 50
+
+flat_prior <- rep(1,n_data)
+beta_prior <- dbeta(p, alpha , beta)
+
+
+#likelihood coin toss --> binomial distribution
+lk <- dbinom(h,n_times,p)
+
+
+#posteriors
+post1 <- lk*1
+flat_post <- post1/sum(post1/n_data)
+
+post2 <- lk*beta_prior
+beta_post <- post2/sum(post2/n_data)
+
+
+df = data.frame(
+    x          = c(p, p),
+    prior      = c(flat_prior, beta_prior),
+    likelihood = c(lk, lk),
+    posterior  = c(flat_post, beta_post),
+    label      = c(rep("Flat", n_data), rep("Beta", n_data))
+)
+
+plot_pr <- ggplot(data= df , aes(x = x, y=prior)) + theme_linedraw() + 
+       geom_line(aes(color=label), lwd=1.5) +
+        ggtitle("Prior Functions")+ labs( x='p', y='Probability Density') +
+         theme(plot.title = element_text(size=30), 
+                                 axis.text.x = element_text(size=20), 
+                                 axis.text.y = element_text(size=20),
+                                 axis.title.x = element_text(size=22),
+                                 axis.title.y = element_text(size=22),
+                                 legend.text=element_text(size=20),
+                                 legend.title=element_text(size=20))
+
+plot_lk <- ggplot(data= df , aes(x = x, y=likelihood)) + theme_linedraw() + 
+       geom_line(aes(color=label), lwd=1.5) +
+        ggtitle("Likelihood Functions")+ labs( x='p', y='Probability Density') +
+         theme(plot.title = element_text(size=30), 
+                                 axis.text.x = element_text(size=20), 
+                                 axis.text.y = element_text(size=20),
+                                 axis.title.x = element_text(size=22),
+                                 axis.title.y = element_text(size=22),
+                                 legend.text = element_text(size=20),
+                                 legend.title = element_text(size=20))
+
+
+plot_post <- ggplot(data= df , aes(x = x, y=posterior)) + theme_linedraw() + 
+       geom_line(aes(color=label), lwd=1.5) +
+        ggtitle("Posterior Functions")+ labs( x='p', y='Probability Density') +
+         theme(plot.title = element_text(size=30), 
+                                 axis.text.x = element_text(size=20), 
+                                 axis.text.y = element_text(size=20),
+                                 axis.title.x = element_text(size=22),
+                                 axis.title.y = element_text(size=22),
+                                 legend.text = element_text(size=20),
+                                 legend.title = element_text(size=20))
+
+
+
+grid.arrange(plot_pr, plot_lk, plot_post, ncol=3)
+```
+
+```{r}
+most_prob_flat <- p[which.max(flat_post)]
+most_prob_beta <- p[which.max(beta_post)]
+
+cat("The Most Probable Value for the Coin Toss probability p is:\n 
+    \t", most_prob_flat, "with the flat prior \n
+    \t", most_prob_beta, "with the beta prior \n")
+
+
+#95 % credibility interval
+
+flat_l_lim <- p[cumsum(flat_post/n_data) > 0.025 ][1]
+flat_h_lim <- p[cumsum(flat_post/n_data) > 0.975 ][1]
+
+beta_l_lim <- p[cumsum(beta_post/n_data) > 0.025 ][1]
+beta_h_lim <- p[cumsum(beta_post/n_data) > 0.975 ][1]
+
+
+cat("\n95 % Credibility Interval :\n
+    \t", flat_l_lim, "-", flat_h_lim, "with the flat prior \n
+    \t", beta_l_lim, "-", beta_h_lim, "with the beta prior \n")
+
+
+```
+```{r fig.align="center", fig.width=7 , fig.height=5}
+
+x_range <- seq(flat_l_lim,flat_h_lim, length.out = 200)
+
+
+plot_CI1 <- ggplot() + theme_linedraw() +   
+  geom_line(aes(x = p, y=flat_post), color='steelblue3', lwd=1.5) +
+                geom_vline(xintercept = flat_l_lim , linetype='dashed', lwd=0.8) +
+                geom_vline(xintercept = flat_h_lim , linetype='dashed', lwd=0.8) +
+geom_area(aes(x_range, y=dbeta(x=x_range, 1+15, 1+30-15)), alpha =0.3, fill = 'coral1') +
+
+  ggtitle("Posterior Function (from Flat Prior) with 95% Credibility Interval")+              
+          labs(x='p', y='Probability Density') +
+                theme(plot.title = element_text(size=15), 
+                                 axis.text.x = element_text(size=10), 
+                                 axis.text.y = element_text(size=10),
+                                 axis.title.x = element_text(size=12),
+                                 axis.title.y = element_text(size=12))
+
+plot_CI1
+
+
+```
+```{r fig.align="center", fig.width=7 , fig.height=5}
+
+x_range_b <- seq(beta_l_lim, beta_h_lim, length.out = 200)
+
+plot_CI2 <- ggplot() + theme_linedraw() +   
+  geom_line(aes(x = p, y=beta_post), color='firebrick3', lwd=1.5) +
+            geom_vline(xintercept = beta_l_lim , linetype='dashed', lwd=0.8) +
+            geom_vline(xintercept = beta_h_lim , linetype='dashed', lwd=0.8) +
+           geom_area(aes(x_range_b, y=dbeta(x=x_range_b, 50+15, 50+30-15)), alpha =0.3, fill = 'coral1') +
+
+   ggtitle("Posterior Function (from Beta Prior) with 95% Credibility Interval") +  
+    labs(x='p', y='Probability Density') +
+         theme(plot.title = element_text(size=15), 
+                                 axis.text.x = element_text(size=10), 
+                                 axis.text.y = element_text(size=10),
+                                 axis.title.x = element_text(size=12),
+                                 axis.title.y = element_text(size=12))
+
+plot_CI2
+
+
+
+```
+```{r}
+
+
+#sequantial analysis
+n_times <- 30
+n_data <- 1000
+
+p = seq(0,1, length.out = n_data)
+
+#priors
+alpha <- 50
+beta <- 50
+flat_prior <- rep(1,n_data)
+beta_prior <- dbeta(p, alpha , beta)
+
+most_prob_flat <- c()
+most_prob_beta <- c()
+flat_l_lim  <- c()
+flat_u_lim  <- c()
+beta_l_lim  <- c()
+beta_u_lim  <- c()
+
+n_in <- 1
+
+for(i in 1:n_times){
+  
+    h <- sum(str_count(outcomes[i], 'H'))
+
+    #likelihood coin toss --> binomial distribution
+    lk <- dbinom(h,n_in,p)
+    
+    #posteriors
+    post1 <- lk*flat_prior
+    flat_post <- post1/sum(post1/n_data)
+    
+    post2 <- lk*beta_prior
+    beta_post <- post2/sum(post2/n_data)
+
+    #sequential <-> update all at each step
+    most_prob_flat = c(most_prob_flat, p[which.max(flat_post)])
+    most_prob_beta = c(most_prob_beta, p[which.max(beta_post)])
+    flat_l_lim   = c(flat_l_lim,  p[cumsum(flat_post/n_data) > 0.025][1])
+    flat_u_lim  = c(flat_u_lim, p[cumsum(flat_post/n_data) > 0.975][1])
+    beta_l_lim   = c(beta_l_lim,  p[cumsum(beta_post/n_data) > 0.025][1])
+    beta_u_lim  = c(beta_u_lim, p[cumsum(beta_post/n_data) > 0.975][1])
+
+    #and use the found posteriors as priors for the next step 
+    flat_prior = flat_post
+    beta_prior = beta_post
+    
+}
+
+
+```
+
+```{r fig.align="center", fig.width=7 , fig.height=5}
+
+df_seq = data.frame(
+    x          = c(p, p),
+    posterior  = c(flat_post, beta_post),
+    label      = c(rep("Uniform", n_data), rep("Beta", n_data))
+)
+
+
+plot_post_s <- ggplot(data=df_seq , aes(x=x, y=posterior)) + theme_linedraw() +   
+  geom_line( aes(color=label), lwd=1.5) +
+      ggtitle("Posterior Functions - Sequential Analysis")+              
+          labs(x='p', y='Probability Density') +
+                theme(plot.title = element_text(size=15), 
+                                 axis.text.x = element_text(size=10), 
+                                 axis.text.y = element_text(size=10),
+                                 axis.title.x = element_text(size=12),
+                                 axis.title.y = element_text(size=12),
+                                  legend.text = element_text(size=12),
+                                 legend.title = element_text(size=12))
+
+plot_post_s
+
+```
+
+```{r fig.align="center", fig.width=7 , fig.height=5}
+
+df_CI = data.frame(
+    x = rep(1:n_times, 2),
+    y = c(most_prob_flat, most_prob_beta),
+    y_max = c(flat_u_lim, beta_u_lim),
+    y_min = c(flat_l_lim, beta_l_lim),
+    label = c(rep("Flat", n_times), rep("Beta", n_times))
+)
+
+plot_CI3 <- ggplot(data=df_CI, aes(x=x, y=y, ymax=y_max, min=y_min, fill=label, linetype=label, color=label)) +   
+     theme_linedraw() +                                            
+     geom_line(aes(color=label), lwd=1.5) +    
+     geom_ribbon(alpha=0.3) + 
+  
+      ggtitle("Summary plot - sequential analysis") +
+      labs(xlab='Step', ylab='Most Probable Value for p',
+           subtitle="Filled regions represent the 95% credibility interval") +
+  
+      theme(plot.title = element_text(size=22),
+            plot.subtitle = element_text(size=12), 
+             axis.text.x = element_text(size=10), 
+             axis.text.y = element_text(size=10),
+             axis.title.x = element_text(size=12),
+             axis.title.y = element_text(size=12),
+            legend.text = element_text(size=12),
+            legend.title = element_text(size=12))
+                                         
+
+plot_CI3
+
+
+```
+

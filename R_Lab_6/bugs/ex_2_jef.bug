@@ -1,0 +1,14 @@
+model{
+
+#data likelihood
+
+for (i in 1:length(X)){
+    X[i] ~ dpois(lambda);
+}
+
+#Prior for lambda
+
+lambda ~ dbeta(1/2 , 1/2);
+
+
+}

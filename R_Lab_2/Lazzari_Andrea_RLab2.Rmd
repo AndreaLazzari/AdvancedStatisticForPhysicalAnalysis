@@ -1,0 +1,338 @@
+---
+title: "R Laboratory 2"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2)
+library(comprehenr)
+```
+
+**Exercise 1**
+
+A set of measurements have been performed on the concentration of a contaminant
+in tap water. The following tables reports a set of values (x), with the 
+corresponding probabilities given by the two methods (p1 and p2)
+Evaluate the expected values, E[X], and the variance, Var(X), for both methods
+
+
+
+```{r}
+
+x <- c(15.58, 15.9, 16, 16.1, 16.2)
+p1 <- c(0.15, 0.21, 0.35, 0.15, 0.14)
+p2 <- c(0.14, 0.05, 0.64, 0.08, 0.09)
+
+cat("Expected value with method p1 ", sum(x*p1))
+cat("Expected value with method p2 ", sum(x*p2))
+
+cat("Variance with method p1 ", ( sum(p1*(x^2)) - (sum(x*p1))^2 ))
+cat("Variance with method p2 ", ( sum(p2*(x^2)) - (sum(x*p2))^2 ))
+
+
+```
+
+**Exercise 2**
+
+• the waiting time, in minutes, at the doctor’s is about 30 minutes, and the 
+distribution follows an exponential pdf with rate 1/30
+
+A) simulate the waiting time for 50 people at the doctor’s office and plot 
+the relative
+histogram
+
+B) what is the probability that a person will wait for less than 10 minutes ?
+
+C) evaluate the average waiting time from the simulated data and compare it with
+the expected value (calculated from theory and by manipulating the probability
+distributions using R)
+
+D) what is the probability for waiting more than one hour before being received?
+
+
+
+```{r fig.align="center", fig.width=8 , fig.height=6}
+# exponential pdf
+#Dt=1 min
+
+#A)
+waiting_time <- rexp(50, rate=1/30)
+
+hist(waiting_time, col="steelblue", ylab="Occurences")
+#-----------------
+#B)
+cat("The probability that a person will wait for less than 10 minutes is ", pexp(10 , rate=1/30)*100, "%")
+
+#-----------------
+#C)
+
+exp_val_analysis <- mean(waiting_time)
+expect_val_theo = 1/(1/30)   #from theory E[x] = 1/lambda
+expect_val_distrib = integrate( function(x){ x*dexp(x, rate=1/30)}, 0 , +Inf)
+
+cat("The expected value analysing the data is ", exp_val_analysis, ", from the theory ",expect_val_theo, ", from the distribution", expect_val_distrib[["value"]] ," ± ", round(expect_val_distrib[["abs.error"]], digits = 6))
+#---------------
+#D)
+cat("The probability that a person will wait for more than 1 hour is ", (1 - pexp(60 , rate=1/30))*100, "%")
+```
+
+**Exercise 3**
+
+• Let’s suppose that on a book, on average, there is one typo error every 
+three pages.
+If the number of errors follows a Poisson distribution, plot the pdf and cdf, 
+and calculate the probability that there is at least one error on a 
+specific page of the book.
+
+
+```{r fig.align="center", fig.width=8 , fig.height=6}
+#Dx=1 page
+
+library(ggplot2)
+
+rate <- 1/3
+distr <- dpois(0:10, lambda=rate)
+df <- data.frame((0:10) , distr) 
+colnames(df) <- c('x' , 'y')
+
+plot <- ggplot(df , aes(x=factor(x), y=y))
+plot <- plot + geom_bar(stat='identity', fill="steelblue", color='grey3') + theme_linedraw()
+plot <- plot + ggtitle('Poisson Distrib of Errors in the book') + labs(x="Number of Errors", y="Occurences") +                       theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12)) + scale_x_discrete(breaks = 0:10)
+plot
+
+#cumulative
+cum_distr <- ppois(0:5, lambda=rate)
+df2 <- data.frame((0:5) , cum_distr) 
+colnames(df2) <- c('x' , 'y')
+
+plot <- ggplot(df2 , aes(x=factor(x), y=y))
+plot <- plot + geom_bar(stat='identity', fill="firebrick3", color='grey3', alpha=0.95) + theme_linedraw()
+plot <- plot + ggtitle('Poisson Cumulative Distrib of Errors in the book') + labs(x="Number of Errors", y="Occurences") + theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12)) + scale_x_discrete(breaks = 0:5)
+plot
+
+#probability that there is at least one error on a specific page of the book
+cat("The probability that there is at least one error on a specific page of the book is ", (1-distr[1])*100 , "%" )
+
+```
+
+**Exercise 4**
+
+• we randomly draw cards from a deck of 52 cards, with replacement, until 
+one ace is drawn. Calculate the probability that at least 10 draws are needed.
+
+
+```{r}
+ace_prob <- dbinom(x=0 , size=9, prob=4/52)
+
+cat('The probability that are needed at least 10 draws to draw an ace is: ', ace_prob*100)
+```
+
+**Exercise 5**
+
+• the time it takes a student to complete a TOLC-I University orientation and 
+evaluation test follows a density function of the form
+
+```{r}
+         c(t − 1)(2 − t)    if  1 < t < 2
+f (X) = 
+          0             otherwise
+
+```
+          
+where t is the time in hours.
+
+a) using the integrate() R function, determine the constant c 
+(and verify it analytically)
+
+b) write the set of four R functions and plot the pdf and cdf, respectively
+
+c) evaluate the probability that the student will finish the aptitude test
+in more than 75 minutes. And that it will take 90 and 120 minutes.
+
+
+```{r fig.align="center", fig.width=8 , fig.height=6}
+funct <- function(t){(t-1)*(2-t)}
+integral <- integrate(funct, lower = 1 , upper = 2)
+
+cat('The constant c that correctly normalizes the integral is: ', 1/(integral$value), '\n')
+cat('According with the analytical form of the integral is F(t) = -(t^3)/3 + 3/2*t^2 -2t, \nF(2)- F(1)= 6 is the value of the c constant')
+
+#--------
+#b)
+dfunc <- function(t){
+  distrib <- ifelse(t > 1 & t < 2, 6*(t-1)*(2-t),
+                        0)
+  return(distrib)
+}
+
+cfunc <- function(t){
+  cdistr <- ifelse(t > 1 & t < 2, -2*(t^3) + 9*(t^2) -12*(t) + 5, ifelse(t>=2, 1, 0))
+  return(cdistr)
+}
+
+x_val <- seq(1, 2 , length=20)
+
+
+
+qfunc <- function(q){ 
+  return(ifelse(q >=0 & q <= 1, uniroot(function(x){ return (c_func(x)-q)}, lower=1, upper=2)$root,
+                "invalid input, t must be between 0 and 1"))
+    }
+
+
+rfunc <- function(n){
+ return(to_vec(for(sampl in runif(n)) qfunc(sampl)))
+  }
+
+
+
+plot <- ggplot()
+plot <- plot + geom_bar(aes(x=x_val, y=dfunc(x_val)), stat='identity', fill="steelblue", color='grey3') + theme_linedraw()
+plot <- plot + ggtitle('Probability Distribution') + labs(x="x", y="y") +                                                      theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+plot
+
+
+
+plot2 <- ggplot()
+plot2 <- plot2 + geom_bar(aes(x=x_val, y=cfunc(x_val)), stat='identity', fill="firebrick2", color='grey3') + theme_linedraw()
+plot2 <- plot2 + ggtitle('Cumulative Probability Distribution') + labs(x="x", y="y") +                       theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+plot2
+
+
+prob1 <- integrate(dfunc, lower = 75/60 , upper =2)
+
+cat('The probability that the test takes more then 75 minutes is: ', prob1$value*100, '% \n')
+cat('The probability that the test takes exactly 90 minutes is: ', 0, '\nsingle point in a continous distribution\n')
+cat('The probability that the test takes exactly 120 minutes is: ', 0, 
+    '\n a single point in a continous distribution\n')
+
+p = 1 - cfunc(1.5)
+cat("The probability that the test takes between minute 90 and 120 is: ", p*100, "%")
+
+
+```
+
+**Exercise 6**
+
+• the lifetime of tires sold by an used tires shop is 104 · x km, where x is a random
+variable following the distribution function
+
+
+```{r}
+         2/x^2     if  1 < x < 2
+f (X) =
+          0       otherwise
+```
+
+
+
+          
+a) write the set of four R functions and plot the pdf and cdf, respectively
+
+b) determine the probability that tires will last less than 15000 km
+
+c) sample 3000 random variables from the distribution and determine 
+the mean value and the variance, using the expression Var(X) = E[X^2] − E[X]^2
+
+
+```{r fig.align="center", fig.width=8 , fig.height=6}
+funct2 <- function(x){ ifelse(x > 1 & x < 2, 2*(x^2),
+                        0)}
+integral2 <- integrate(funct2, lower = 1 , upper = 2)
+
+cat('The integral value is ', (integral2$value), ' with an error of', integral2$abs.error)
+
+dfunc2 <- function(x){
+  distrib <- ifelse(x > 1 & x < 2,
+                     2/(x^2),
+                        0)
+  return(distrib)
+}
+
+cfunc2 <- function(x){
+  cdistr <- ifelse(x > 1 & x < 2, 
+                   -2/x + 2, ifelse(x>=2, 1, 0))
+  return(cdistr)
+}
+
+
+qfunc2 <- function(p){
+    q_2 <- ifelse(p >= 0 & p <= 1,
+               uniroot(function(x){ return (cfunc2(x) - p)}, lower=1, upper=2)$root,
+               "invalid input, t must be between 0 and 1")
+    return(q_2)
+}
+
+
+rfunc2 <- function(n){
+  return(to_vec(for(sampl in runif(n)) qfunc2(sampl)))
+}
+
+
+
+x_val2 <- seq(1.01, 1.99 , length=20)
+
+
+
+plot <- ggplot()
+plot <- plot + geom_bar(aes(x=x_val2, y=dfunc2(x_val2)), stat='identity', fill="steelblue", color='grey3') + theme_linedraw()
+plot <- plot + ggtitle('Probability Distribution') + labs(x="x", y="y") +                                                      theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+plot
+
+
+
+plot2 <- ggplot()
+plot2 <- plot2 + geom_bar(aes(x=x_val2, y=cfunc2(x_val2)), stat='identity', fill="firebrick2", color='grey3') + theme_linedraw()
+plot2 <- plot2 + ggtitle('Cumulative Probability Distribution') + labs(x="x", y="y") +                       theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+plot2
+
+#-----------
+#b)
+cat('The probability that tires will last less than 15000 km is ' , cfunc2(1.5)*100 , '%')
+
+
+#-----------
+#c)
+n_samples <- 3000
+samples <- rfunc2(n_samples)
+tyre_life <- samples*(10^4)
+
+avg <- sum(tyre_life)/n_samples
+cat('The Average tire life of the tires sold by of this shop is', avg , 'km')
+
+expec_2 <- sum(tyre_life^2)/n_samples
+
+cat('The tire life Variance of the tires sold by this shop is', (expec_2 - (avg^2)) , 'km')
+
+cat('Can estimate the lifetime of the tires sold by this shop as', avg ,'km', '±', sqrt(expec_2 - (avg^2)),'km')
+
+
+
+
+
+```
+

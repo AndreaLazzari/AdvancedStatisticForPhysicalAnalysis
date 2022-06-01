@@ -1,0 +1,872 @@
+---
+title: "R Laboratory 5"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2)
+library(latex2exp)
+library(gridExtra)
+library(grid)
+library(dplyr)
+```
+
+
+## Exercise 1
+
+• the number of particles emitted by a radioactive source during a fixed 
+interval of time (∆t = 10 s) follows a Poisson distribution on the parameter μ. 
+The number of particles observed during
+consecutive time intervals is: 4, 1, 3, 1 and 3
+
+(a) suppose a uniform prior distribution for the parameter μ
+- determine and draw the posterior distribution for μ, given the data
+- evaluate mean, median and variance, both analytically and numerically in R
+
+(b) suppose a Jeffrey’s prior for the parameter μ
+- determine and draw the posterior distribution for μ, given the data
+- evaluate mean, median and variance, both analytically and numerically in R
+
+(c) evaluate a 95% credibility interval for the results obtained with both priors. Compare the result with that obtained using a normal approximation 
+for the posterior distribution, with the same mean and standard deviation
+
+
+```{r fig.align="center", fig.width=7 , fig.height=5}
+
+obs <- c(4,1,3,1,3)
+mu_range <- seq(0,10, by=0.01)
+
+#from a uniform prior
+posterior_u <- dgamma(mu_range, shape = sum(obs) + 1, rate=length(obs))
+
+plot <- ggplot() + theme_linedraw() + 
+       geom_line(aes(x=mu_range, y=posterior_u), color='steelblue3', lwd=1.5) +
+ ggtitle("Posterior Function from a Uniform Prior")+ labs(x=TeX('$\\mu$'), 
+                              y= TeX('$ProbabilityDensity(\\mu)$')) + 
+                theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+
+plot
+
+
+#Analytic mean and variance
+
+mean_post_u <- ((sum(obs) + 1)/length(obs))   #alpha/beta
+cat("\nThe analytic mean of the found Posterior distribution is:", mean_post_u)
+
+var_post_u <- ((sum(obs) + 1)/(length(obs))^2)    #alpha/beta^2
+cat("\nThe analytic variance of the found Posterior distribution is:", var_post_u)
+
+
+#Numerical mean, median and variance
+
+mean_int <- function(x){
+  return (x*dgamma(x, shape = sum(obs) + 1, rate=length(obs)))
+}
+
+mean_num <- integrate(mean_int, lower = 0 , upper = Inf)
+cat("\nThe numerical mean of the found Posterior distribution is:", mean_num$value)
+
+cumul <- pgamma(mu_range, shape = sum(obs) + 1, rate=length(obs))
+median_num <- mu_range[length(cumul[cumul < 0.5])]
+
+cat("\nThe numeric median of the found Posterior distribution is:", median_num)
+
+
+var_int <- function(x){
+  return ((x^2)*dgamma(x, shape = sum(obs) + 1, rate=length(obs)))
+}
+
+var_num <- integrate(var_int, lower = 0 , upper = Inf)
+cat("\nThe numerical variance of the found Posterior distribution is:", var_num$value - mean_num$value^2)
+
+```
+```{r fig.align="center", fig.width=7 , fig.height=5}
+
+#from a Jeffrey’s prior
+posterior_j <- dgamma(mu_range, shape = sum(obs) + 1/2, rate=length(obs))
+
+plot <- ggplot() + theme_linedraw() + 
+       geom_line(aes(x=mu_range, y=posterior_j), color='firebrick4', lwd=1.5) +
+ ggtitle("Posterior Function from a Jeffrey’s Prior")+ labs(x=TeX('$\\mu$'), 
+                              y= TeX('$ProbabilityDensity(\\mu)$')) + 
+                theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+
+plot
+
+
+#Analytic mean and variance
+
+mean_post_j <- ((sum(obs) + 1/2)/length(obs))   #alpha/beta
+cat("\nThe analytic mean of the found Posterior distribution is:", mean_post_j)
+
+var_post_j <- ((sum(obs) + 1/2)/(length(obs))^2)    #alpha/beta^2
+cat("\nThe analytic variance of the found Posterior distribution is:", var_post_j)
+
+
+#Numerical mean, median and variance
+
+mean_int <- function(x){
+  return (x*dgamma(x, shape = sum(obs) + 1/2, rate=length(obs)))
+}
+
+mean_num <- integrate(mean_int, lower = 0 , upper = Inf)
+cat("\nThe numerical mean of the found Posterior distribution is:", mean_num$value)
+
+cumul_j <- pgamma(mu_range, shape = sum(obs) + 1/2, rate=length(obs))
+median_num <- mu_range[length(cumul_j[cumul_j < 0.5])]
+
+cat("\nThe numeric median of the found Posterior distribution is:", median_num)
+
+
+var_int <- function(x){
+  return ((x^2)*dgamma(x, shape = sum(obs) + 1/2, rate=length(obs)))
+}
+
+var_num <- integrate(var_int, lower = 0 , upper = Inf)
+cat("\nThe numerical variance of the found Posterior distribution is:", var_num$value - mean_num$value^2)
+
+```
+```{r fig.align="center", fig.width=7 , fig.height=5}
+
+cumul_unif <- pgamma(mu_range, shape = sum(obs) + 1, rate=length(obs))
+
+unif_l_lim <- mu_range[length(cumul[cumul < 0.025])]
+unif_h_lim <- mu_range[length(cumul[cumul < 0.975])]
+
+
+cat("\n95 % Credibility Interval :
+    \t", unif_l_lim, "-", unif_h_lim, "with the Uniform prior")
+
+x_plot <- seq(unif_l_lim, unif_h_lim, by=0.1)
+cred_plot <- dgamma(x_plot, shape = sum(obs) + 1, rate=length(obs) )
+
+plot <- ggplot() + theme_linedraw() + 
+       geom_line(aes(x=mu_range, y=posterior_u), color='steelblue3', lwd=1.5) +
+        geom_vline(xintercept = unif_l_lim , linetype='dashed', lwd=0.8) +
+        geom_vline(xintercept = unif_h_lim , linetype='dashed', lwd=0.8) +
+        geom_ribbon(aes(x=x_plot, ymin=0 , ymax=cred_plot), alpha =0.3, fill = 'coral1') +
+ 
+     ggtitle("Posterior Function from a Uniform Prior")+ labs(x=TeX('$\\mu$'), 
+                                         y= TeX('$ProbabilityDensity(\\mu)$')) + 
+                theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+
+plot
+```
+
+```{r fig.align="center", fig.width=7 , fig.height=5}
+
+#limit with another method
+jef_l_lim <- round((qgamma(0.025, sum(obs) + 1/2, length(obs))),2)
+jef_h_lim <- round((qgamma(0.975, sum(obs) + 1/2, length(obs))),2)
+
+
+cat("\n95 % Credibility Interval :
+\t", jef_l_lim, "-", jef_h_lim, "with the Jeffrey's prior")
+
+x_plot <- seq(jef_l_lim, jef_h_lim, by=0.1)
+cred_plot <- dgamma(x_plot, shape = sum(obs) + 1/2, rate=length(obs) )
+
+plot <- ggplot() + theme_linedraw() + 
+       geom_line(aes(x=mu_range, y=posterior_j), color='firebrick3', lwd=1.5) +
+        geom_vline(xintercept = jef_l_lim , linetype='dashed', lwd=0.8) +
+        geom_vline(xintercept = jef_h_lim , linetype='dashed', lwd=0.8) +
+   geom_ribbon(aes(x=x_plot, ymin=0 , ymax=cred_plot), alpha =0.3, fill = 'khaki2') +
+ 
+     ggtitle("Posterior Function from a Jeffrey's Prior")+ labs(x=TeX('$\\mu$'), 
+                                         y= TeX('$ProbabilityDensity(\\mu)$')) + 
+                theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+
+plot
+
+```
+
+```{r fig.align="center", fig.width=7 , fig.height=5}
+
+posterior_n_u <- dnorm(mu_range, mean=mean_post_u, sd=var_post_u) 
+
+norm_u_l_lim <- round((qnorm(0.025, mean=mean_post_u, sd=var_post_u)),2)
+norm_u_h_lim <- round((qnorm(0.975, mean=mean_post_u, sd=var_post_u)),2)
+
+
+cat("\n95 % Credibility Interval :
+    \t", norm_u_l_lim, "-", norm_u_h_lim, "with the Uniform prior")
+
+x_plot <- seq(norm_u_l_lim, norm_u_h_lim, by=0.1)
+cred_plot <- dnorm(x_plot, mean=mean_post_u, sd=var_post_u)
+
+plot <- ggplot() + theme_linedraw() + 
+       geom_line(aes(x=mu_range, y=posterior_n_u), color='steelblue3', lwd=1.5) +
+        geom_vline(xintercept = norm_u_l_lim , linetype='dashed', lwd=0.8) +
+        geom_vline(xintercept = norm_u_h_lim , linetype='dashed', lwd=0.8) +
+        geom_ribbon(aes(x=x_plot, ymin=0 , ymax=cred_plot), alpha =0.3, fill = 'coral1') +
+ 
+     ggtitle("Posterior distribution using the Normal approx")+
+              labs(x = TeX('$\\mu$'),y = TeX('$ProbabilityDensity(\\mu)$'), subtitle='Mean and std from the posterior with the Uniform prior') + 
+                theme(plot.title = element_text(size=16), 
+                      plot.subtitle = element_text(size=12),
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+
+plot
+
+
+```
+
+```{r fig.align="center", fig.width=7 , fig.height=5}
+
+posterior_n_j <- dnorm(mu_range, mean=mean_post_j, sd=var_post_j) 
+
+norm_j_l_lim <- round((qnorm(0.025, mean=mean_post_j, sd=var_post_j)),2)
+norm_j_h_lim <- round((qnorm(0.975, mean=mean_post_j, sd=var_post_j)),2)
+
+
+cat("\n95 % Credibility Interval :
+    \t", norm_j_l_lim, "-", norm_j_h_lim, "with the Jeffrey's prior")
+
+x_plot <- seq(norm_j_l_lim, norm_j_h_lim, by=0.1)
+cred_plot <- dnorm(x_plot, mean=mean_post_j, sd=var_post_j)
+
+plot <- ggplot() + theme_linedraw() + 
+       geom_line(aes(x=mu_range, y=posterior_n_j), color='firebrick3', lwd=1.5) +
+        geom_vline(xintercept = norm_j_l_lim , linetype='dashed', lwd=0.8) +
+        geom_vline(xintercept = norm_j_h_lim , linetype='dashed', lwd=0.8) +
+        geom_ribbon(aes(x=x_plot, ymin=0 , ymax=cred_plot), alpha =0.3, fill = 'khaki2') +
+ 
+     ggtitle("Posterior distribution using the Normal approx")+
+              labs(x = TeX('$\\mu$'),y = TeX('$ProbabilityDensity(\\mu)$'), subtitle="Mean and std from the posterior with the Jeffrey's prior") + 
+                theme(plot.title = element_text(size=16), 
+                      plot.subtitle = element_text(size=12),
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+
+plot
+
+```
+
+```{r}
+df <- data.frame(row.names=c('Uniform Prior', "Jeffrey's Prior", 'Normal with Unif' , 'Normal with Jeffrey'))
+
+df["LowerBound_CI_95%"] <- c(unif_l_lim, jef_l_lim, norm_u_l_lim, norm_j_l_lim)
+df["UpperBound_CI_95%"] <- c(unif_h_lim, jef_h_lim, norm_u_h_lim, norm_j_h_lim)
+
+df
+
+```
+
+Also using a Normal approximation the obtained results are very similar with
+respect to the analysis done with Uniform and Jeffrey's Prior.
+
+
+
+## Exercise 2
+• given the problem of the lighthouse discussed last week, study the case in which both the position along the shore (α) and the distance out at sea (β) are unknown
+
+![The Lighthouse Problem Setup](lighthouse.png)
+```{r fig.align="center", fig.width=7 , fig.height=5}
+
+n_sample <- 2000
+alpha_tr <- 1
+beta_tr <- 1
+
+obs_theta <- runif(n_sample, -pi/2, pi/2)
+
+obs_x <- beta_tr*tan(obs_theta) + alpha_tr   #our data
+
+
+p_log_like <- function(a , b, data){
+  logL <- 0.0
+  for (x in data){
+    logL <- logL + log( b/(b^2 + ((x-a)^2)))
+  }
+  return (logL)
+}
+
+a_min <- -7
+a_max <- 7
+h <- (a_max - a_min)/n_sample
+alpha=seq(a_min, by=h , length.out = n_sample)
+
+
+b_min <- 0
+b_max <- 7
+h2 <- (b_max - b_min)/n_sample
+beta=seq(b_min, by= h2, length.out = n_sample)
+
+repeat{
+n_str <- readline (sprintf("Enter data set dimension (less or equal to %2.f): ", n_sample))
+num <- as.numeric(n_str)
+if (num > n_sample){cat("\n ERROR: The inserted number exceedes the number of samples:  ")}
+else{ break}
+}
+
+dt <- obs_x[1:num]     #how much sample
+
+z <- matrix(data = NA , nrow = length(alpha) , ncol = length(beta) )
+
+for(j in 1:length(alpha)) {
+    for(k in 1:length(beta)) {
+      z[j,k] <- p_log_like(alpha[j], beta[k], dt)
+     }
+}
+
+z <- z - max(z)
+
+df <- data.frame(z)
+
+#evaluate the posteriors for alpha and beta marginalizing
+un_post_a <- apply(exp(df), 1, sum)
+un_post_b <- apply(exp(df), 2, sum)
+
+
+```
+
+
+```{r fig.align="center", fig.width=12 , fig.height=7}
+
+index_max_a <- which.max(un_post_a)
+
+plot <- ggplot() + theme_linedraw() +
+  geom_line(aes(x=alpha, y=un_post_a , color='alpha Posterior'), lwd=1.5) +
+  geom_vline( aes(xintercept = alpha[index_max_a], color = 'Max alpha') , linetype='dashed', lwd=1.2)+
+    ggtitle(TeX(" Un-normalized $\\alpha$ Posterior Function"))+ labs(x=TeX('$\\alpha$'), y= TeX('$ProbabilityDensity(\\alpha)$'), color='Legend') +                                                                theme(legend.text=element_text(size=12))+
+                  theme(plot.title = element_text(size=16),
+                      axis.text.x = element_text(size=10),
+                      axis.text.y = element_text(size=10),
+                      axis.title.x = element_text(size=12),
+                      axis.title.y = element_text(size=12)) +
+   scale_color_manual(values = c( 'alpha Posterior' = 'steelblue3', 'Max alpha'='black')) + xlim(-1,3)
+
+plot
+
+```
+
+```{r fig.align="center", fig.width=12 , fig.height=7}
+
+index_max_b <- which.max(un_post_b)
+
+plot <- ggplot() + theme_linedraw() +
+  geom_line(aes(x=beta, y=un_post_b, color='beta Posterior'), lwd=1.5) +
+  geom_vline( aes(xintercept = beta[index_max_b], color = 'Max beta') , linetype='dashed', lwd=1.2)+           ggtitle(TeX(" Un-normalized $\\beta$ Posterior Function"))+
+            labs(x=TeX('$\\beta'), y= TeX('$ProbabilityDensity(\\beta)$'), color='Legend') +                                     theme(legend.text=element_text(size=12))+
+                          theme(plot.title = element_text(size=16),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=12),
+                          axis.title.y = element_text(size=12)) +
+     scale_color_manual(values = c( 'beta Posterior' = 'firebrick4', 'Max beta'='black')) + xlim(0,3)
+
+plot
+
+```
+
+
+
+```{r}
+cat('alpha max: ', alpha[index_max_a] , '\n')
+cat('beta max: ', beta[index_max_b] , '\n')
+
+```
+
+```{r fig.align="center",fig.width=12 , fig.height=7}
+
+posterior_alpha <- un_post_a/(h*sum(un_post_a))
+
+cumul <- cumsum(posterior_alpha*((a_max-a_min)/n_sample))
+l_lim <- alpha[length(cumul[cumul < 0.025])]
+h_lim <- alpha[length(cumul[cumul < 0.975])]
+
+y_ribbon <- posterior_alpha[length(cumul[cumul < 0.025]):length(cumul[cumul < 0.975])]
+
+cat("\n95 % Credibility Interval :
+    \t", l_lim, "-", h_lim)
+
+x_plot_a <- seq(l_lim, h_lim, length.out=length(y_ribbon))
+
+index_max_a <- which.max(posterior_alpha)
+
+
+plot <- ggplot() + theme_linedraw() + 
+       geom_line(aes(x=alpha, y=posterior_alpha , color='alpha Posterior'), lwd=1.5) +
+       geom_vline( aes(xintercept = alpha[index_max_a], color = 'Max alpha') , linetype='dashed', lwd=1.2)+ geom_vline(xintercept = l_lim , linetype='dashed', lwd=0.8) +
+        geom_vline(xintercept = h_lim , linetype='dashed', lwd=0.8) +
+        geom_ribbon(aes(x=x_plot_a, ymin=0 , ymax=y_ribbon), alpha =0.3, fill ='coral') +
+ ggtitle(TeX(" Normalized $\\alpha$ Posterior Function"))+ labs(x=TeX('$\\alpha$'), y= TeX('$ProbabilityDensity(\\alpha)$'), subtitle="With Credibility Interval", color='Legend' )+                      theme(legend.text=element_text(size=12))+  theme(plot.title = element_text(size=16),
+                   plot.subtitle = element_text(size=12),                   
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12)) + 
+  scale_color_manual(values = c( 'alpha Posterior' = 'navy', 'Max alpha'='darkorange')) + xlim(-1,3)
+
+
+plot
+
+```
+
+
+```{r fig.align="center", fig.width=12 , fig.height=7}
+
+posterior_beta <- un_post_b/(h2*sum(un_post_b))
+
+cumul <- cumsum(posterior_beta*((b_max-b_min)/n_sample))
+l_lim <- beta[length(cumul[cumul < 0.025])]
+h_lim <- beta[length(cumul[cumul < 0.975])]
+
+y_ribbon <- posterior_beta[length(cumul[cumul < 0.025]):length(cumul[cumul < 0.975])]
+
+cat("\n95 % Credibility Interval :
+    \t", l_lim, "-", h_lim)
+
+x_plot_b <- seq(l_lim, h_lim, length.out=length(y_ribbon))
+
+index_max_b <- which.max(posterior_beta)
+
+
+plot <- ggplot() + theme_linedraw() + 
+       geom_line(aes(x=beta, y=posterior_beta , color='beta Posterior'), lwd=1.5) +
+       geom_vline( aes(xintercept = beta[index_max_b], color = 'Max beta') , linetype='dashed', lwd=1.2)+  geom_vline(xintercept = l_lim , linetype='dashed', lwd=0.8) +
+        geom_vline(xintercept = h_lim , linetype='dashed', lwd=0.8) +
+        geom_ribbon(aes(x=x_plot_b, ymin=0 , ymax=y_ribbon), alpha =0.3, fill ='khaki2') +
+ ggtitle(TeX(" Normalized $\\beta$ Posterior Function"))+ labs(x=TeX('$\\beta$'), y= TeX('$ProbabilityDensity(\\beta)$'), subtitle="With Credibility Interval", color='Legend') +                                 theme(legend.text=element_text(size=12))+  
+                    theme(plot.title = element_text(size=16),
+                   plot.subtitle = element_text(size=12),                   
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12)) +   
+  scale_color_manual(values = c( 'beta Posterior' = 'firebrick4', 'Max beta'='purple4')) +xlim(0,4)
+
+
+plot
+
+
+```
+
+## Exercise 3
+
+• given the Signal over Background example discussed last week, 
+analyze and discuss the following cases:
+
+(a) vary the sampling resolution of used to generate the data,
+keeping the sample range
+
+xdat <- seq(from=-7*w, to=7*w, by=0.5*w)
+
+• change the resolution $$ \omega =  \{ 0.1, 0.25, 1, 2, 3 \} $$
+• check the effect on the results
+
+(b) change the ratio A/B used to simulate the data 
+(keeping both positive in accordance with the prior)
+
+• check the effect on the results
+
+
+
+```{r fig.align="center", fig.width=12 , fig.height=6}
+# - Generative model
+signal <- function(x, a, b, x0, w, t) {
+         t * (a*exp(-(x-x0)^2/(2*w^2)) + b)
+}
+
+
+# Define model parameters
+x0 <- 0     #signal peak
+w <-1       #signal width
+A_true <- 2    #signal amplitude
+B_true <- 1   #background amplitude
+Delta_t <- 5  #exposure time
+
+
+set.seed(777)
+xdat <- seq(from=-7*w, to=7*w, by=0.5*w)
+s_true <- signal(xdat, A_true, B_true, x0, w, Delta_t) 
+ddat <- rpois(length(s_true), s_true)
+
+xdat_off = xdat-0.25
+xplot <- seq(from=min(xdat), to=max(xdat), by=0.05*w) 
+splot <- signal(xplot, A_true, B_true, x0, w, Delta_t)
+
+
+plot <- ggplot() + theme_linedraw() + scale_x_continuous(breaks = -10:10 , labels = -10:10)+
+    geom_point(aes(x=xplot, y=splot), size=2.7, fill='steelblue1', color='black', pch=21) +
+    geom_step(aes(x= xdat_off, y=ddat), direction = 'vh', lwd=1.5, color='firebrick', alpha=0.7) +
+ ggtitle("Signal with Background")+ labs(x='x', y='Signal + background Counts') + 
+                theme(plot.title = element_text(size=20), 
+                  axis.text.x = element_text(size=15), 
+                  axis.text.y = element_text(size=15),
+                  axis.title.x = element_text(size=16),
+                  axis.title.y = element_text(size=16))
+
+plot
+```
+```{r , fig.align="center", fig.width=10 , fig.height=6}
+
+# - Sampling grid for computing posterior
+alim <- c(0.0, 4.0)
+blim <- c(0.5, 1.5)
+Nsamp <- 100
+uniGrid <- seq(from=1/(2*Nsamp), to=1-1/(2*Nsamp), by=1/Nsamp) 
+delta_a <- diff(alim)/Nsamp 
+delta_b <- diff(blim)/Nsamp
+a <- alim[1] + diff(alim)*uniGrid 
+b <- blim[1] + diff(blim)*uniGrid
+
+# Log posterior
+log.post <- function(d, x, a, b, x0, w, t) {
+            if(a<0 || b <0) {
+                return(-Inf)
+            } # the effect of the prior
+        sum(dpois(d, lambda=signal(x, a, b, x0, w, t), log=TRUE))
+}
+
+
+z <- matrix(data=NA, nrow=length(a), ncol=length(b)) 
+for(j in 1:length(a)) {
+    for(k in 1:length(b)) {
+        z[j,k] <- log.post(ddat, xdat, a[j], b[k], x0, w, Delta_t)
+    } 
+}
+z <- z - max(z) # set maximum to zero
+
+
+
+# Plot un-normalized 2D posterior as contours
+plot_contour <- contour(a, b, exp(z), nlevels = 5, labcex = 1, lwd = 2, 
+                  xlab="Amplitude A", ylab="Background",
+                  main='Un-normalized Posterior Contour Plot', col='springgreen4')
+                  abline(v=A_true, h=B_true, col="darkorange3")
+
+
+```
+
+
+```{r fig.align="center", fig.width=12 , fig.height=7}
+
+p_a_D <- apply(exp(z), 1, sum)
+p_a_D <- p_a_D/(delta_a*sum(p_a_D))
+p_b_D <- apply(exp(z), 2, sum) 
+p_b_D <- p_b_D/(delta_b*sum(p_b_D))
+
+p_a_bD <- exp(Vectorize(log.post, "a")(ddat, xdat, a, B_true,x0, w, Delta_t))
+p_a_bD <- p_a_bD/(delta_a*sum(p_a_bD))
+p_b_aD <- exp(Vectorize(log.post, "b")(ddat, xdat, A_true, b,x0, w, Delta_t))
+p_b_aD <- p_b_aD/(delta_b*sum(p_b_aD))
+
+
+
+#computation of the credibility intervals 
+cumul <- cumsum(p_a_D*((max(a)-min(a))/length(a)))
+
+l_bound <- a[length(cumul[cumul < 0.025])]
+u_bound <- a[length(cumul[cumul < 0.975])]
+y_ribbon <- p_a_D[length(cumul[cumul < 0.025]):length(cumul[cumul < 0.975])]
+x_plot_a <- seq(l_bound, u_bound, length.out=length(y_ribbon))
+
+plot_a <- ggplot() +  theme_linedraw() +
+    geom_line(aes(x = a,y =  p_a_D, color='P(a|D)'), lwd=1.5) + 
+    geom_line(aes(x = a,y =  p_a_bD, color='P(a|b,D)'), linetype='dashed', lwd=1.5) +
+    labs(title=TeX('Plot of $P(a|D)$ and $P(a|b,D)$'), x='a', y='Probability density', color='Legend', subtitle="With Credibility Interval") +
+    geom_ribbon(aes(x = x_plot_a, ymin=0, ymax=y_ribbon), fill='slategray2', alpha=0.4) +
+    geom_vline(aes(xintercept=l_bound),  color='black', linetype='dashed', lwd=1.2) +
+    geom_vline(aes(xintercept=u_bound), linetype='dashed', lwd=1.2, color='black') +
+    scale_color_manual(values = c('P(a|D)'='purple3', 'P(a|b,D)'='green')) +
+             theme(plot.title = element_text(size=20),
+                  plot.subtitle = element_text(size=15),
+                  axis.text.x = element_text(size=15), 
+                  axis.text.y = element_text(size=15),
+                  axis.title.x = element_text(size=16),
+                  axis.title.y = element_text(size=16),
+                  legend.text = element_text(size=15),
+                  legend.title = element_text(size=15))
+
+
+plot_a
+
+
+
+```
+
+
+```{r fig.align="center", fig.width=12 , fig.height=7}
+
+#computation of the credibility intervals
+cumul <- cumsum(p_b_D*((max(b)-min(b))/length(b)))
+
+l_bound <- b[length(cumul[cumul < 0.025])]
+u_bound <- b[length(cumul[cumul < 0.975])]
+y_ribbon <- p_b_D[length(cumul[cumul < 0.025]):length(cumul[cumul < 0.975])]
+x_plot_b <- seq(l_bound, u_bound, length.out=length(y_ribbon))
+
+plot_b <- ggplot() +  theme_linedraw() +
+    geom_line(aes(x = b,y =  p_b_D, color='P(b|D)'), lwd=1.5) + 
+    geom_line(aes(x = b,y =  p_b_aD, color='P(b|a,D)'), linetype='dashed', lwd=1.5) +
+    labs(title=TeX('Plot of $P(b|D)$ and $P(b|a,D)$'), x='b', y='Probability density', color='Legend', subtitle="With Credibility Interval") +
+    geom_ribbon(aes(x = x_plot_b, ymin=0, ymax=y_ribbon), fill='thistle2', alpha=0.4) +
+    geom_vline(aes(xintercept=l_bound),  color='black', linetype='dashed', lwd=1.2) +
+    geom_vline(aes(xintercept=u_bound), linetype='dashed', lwd=1.2, color='black') +
+    scale_color_manual(values = c('P(b|D)'='navy', 'P(b|a,D)'='darkorange')) +
+             theme(plot.title = element_text(size=20),
+                  plot.subtitle = element_text(size=15),
+                  axis.text.x = element_text(size=15), 
+                  axis.text.y = element_text(size=15),
+                  axis.title.x = element_text(size=16),
+                  axis.title.y = element_text(size=16),
+                  legend.text = element_text(size=15),
+                  legend.title = element_text(size=15))
+
+
+plot_b
+
+```
+```{r}
+# Compute mean , standard deviation , covariance , correlation , of A and B
+mean_a <- delta_a * sum(a * p_a_D)
+mean_b <- delta_b * sum(b * p_b_D)
+sd_a <- sqrt( delta_a * sum((a-mean_a)^2 * p_a_D) ) 
+sd_b <- sqrt( delta_b * sum((b-mean_b)^2 * p_b_D) )
+
+
+# Covariance normalization 
+# The normalization constant is Z = delta_a*delta_b*sum(exp(z)).
+# This is independent of (a,b) so can be calculated outside of the loops. 
+cov_ab <- 0
+for(j in 1:length(a)) {
+    for(k in 1:length(b)) {
+        cov_ab <- cov_ab + (a[j]-mean_a)*(b[k]-mean_b)*exp(z[j,k])
+    }
+}
+
+cov_ab <- cov_ab / sum(exp(z)) 
+rho_ab <- cov_ab / (sd_a * sd_b)
+cat("a = ", mean_a, "±", sd_a, "\n") 
+cat("b = ", mean_b, "±", sd_b, "\n") 
+cat("rho = ", rho_ab, "\n")
+```
+
+```{r}
+signal_backround <- function(a_, b_, x0_, w_, t_){
+  
+  
+    # - Generative model
+    signal <- function(x, a, b, x0, w, t) {
+            t * (a*exp(-(x-x0)^2/(2*w^2)) + b)
+    }
+
+# Define model parameters
+x0 <- x0_     #signal peak
+w <- w_       #signal width
+A_true <- a_    #signal amplitude
+B_true <- b_  #background amplitude
+Delta_t <- t_  #exposure time
+
+
+set.seed(777)
+xdat <- seq(from = -7*w, to = 7*w, by = 0.5*w)
+s_true <- signal(xdat, A_true, B_true, x0, w, Delta_t) 
+ddat <- rpois(length(s_true), s_true)
+
+xdat_off = xdat - 0.25
+xplot <- seq(from=min(xdat), to=max(xdat), by=0.05*w) 
+splot <- signal(xplot, A_true, B_true, x0, w, Delta_t)
+
+plot <- ggplot() + theme_linedraw() + scale_x_continuous(breaks = -10:10 , labels = -10:10)+
+    geom_point(aes(x=xplot, y=splot), size=3.5, fill='steelblue1', color='black', pch=21) +
+    geom_step(aes(x= xdat_off, y=ddat), direction = 'vh', lwd=1.5, color='firebrick', alpha=0.7) +
+ ggtitle("Signal with Background")+ labs(x='x', y='Signal + background Counts') + 
+                theme(plot.title = element_text(size=20), 
+                  axis.text.x = element_text(size=15), 
+                  axis.text.y = element_text(size=15),
+                  axis.title.x = element_text(size=16),
+                  axis.title.y = element_text(size=16))
+
+# - Sampling grid for computing posterior
+alim <- c(0.0, 4.0)
+blim <- c(0.5, 1.5)
+Nsamp <- 100
+uniGrid <- seq(from=1/(2*Nsamp), to=1-1/(2*Nsamp), by=1/Nsamp) 
+delta_a <- diff(alim)/Nsamp 
+delta_b <- diff(blim)/Nsamp
+a <- alim[1] + diff(alim)*uniGrid 
+b <- blim[1] + diff(blim)*uniGrid
+
+# Log posterior
+log.post <- function(d, x, a, b, x0, w, t) {
+            if(a<0 || b <0) {
+                return(-Inf)
+            } # the effect of the prior
+        sum(dpois(d, lambda=signal(x, a, b, x0, w, t), log=TRUE))
+}
+
+
+z <- matrix(data=NA, nrow=length(a), ncol=length(b)) 
+for(j in 1:length(a)) {
+    for(k in 1:length(b)) {
+        z[j,k] <- log.post(ddat, xdat, a[j], b[k], x0, w, Delta_t)
+    } 
+}
+z <- z - max(z) # set maximum to zero
+
+ p_a_D <- apply(exp(z), 1, sum)
+ p_a_D <- p_a_D/(delta_a*sum(p_a_D))
+ p_b_D <- apply(exp(z), 2, sum) 
+ p_b_D <- p_b_D/(delta_b*sum(p_b_D))
+
+
+ p_a_bD <- exp(Vectorize(log.post, "a")(ddat, xdat, a, B_true,x0, w, Delta_t))
+ p_a_bD <- p_a_bD/(delta_a*sum(p_a_bD))
+ p_b_aD <- exp(Vectorize(log.post, "b")(ddat, xdat, A_true, b,x0, w, Delta_t))
+ p_b_aD <- p_b_aD/(delta_b*sum(p_b_aD))
+ 
+ 
+ #computation of the credibility intervals 
+cumul_a <- cumsum(p_a_D*((max(a)-min(a))/length(a)))
+
+l_bound_a <- a[length(cumul_a[cumul_a < 0.025])]
+u_bound_a <- a[length(cumul_a[cumul_a < 0.975])]
+y_ribbon_a <- p_a_D[length(cumul_a[cumul_a < 0.025]):length(cumul_a[cumul_a < 0.975])]
+x_plot_a <- seq(l_bound_a, u_bound_a, length.out=length(y_ribbon_a))
+
+plot_a <- ggplot() +  theme_linedraw() +
+    geom_line(aes(x = a,y =  p_a_D), color='purple3', lwd=1.5) + 
+    geom_line(aes(x = a,y =  p_a_bD), color='green', linetype='dashed', lwd=1.5) +
+    labs(title='Plot of P(a|D) and P(a|b,D)', x='a', y='Probability density', subtitle=sprintf('w = %.2f, a/b = %.3s', w, a_/b_)) +
+    geom_ribbon(aes(x = x_plot_a, ymin=0, ymax=y_ribbon_a), fill='slategray2', alpha=0.4) +
+    geom_vline(aes(xintercept=l_bound_a),  color='black', linetype='dashed', lwd=1.2) +
+    geom_vline(aes(xintercept=u_bound_a), linetype='dashed', lwd=1.2, color='black') +
+             theme(plot.title = element_text(size=20),
+                  plot.subtitle = element_text(size=15),
+                  axis.text.x = element_text(size=15), 
+                  axis.text.y = element_text(size=15),
+                  axis.title.x = element_text(size=16),
+                  axis.title.y = element_text(size=16))
+
+ #computation of the credibility intervals
+cumul_b <- cumsum(p_b_D*((max(b)-min(b))/length(b)))
+
+l_bound_b <- b[length(cumul_b[cumul_b < 0.025])]
+u_bound_b <- b[length(cumul_b[cumul_b < 0.975])]
+y_ribbon_b <- p_b_D[length(cumul_b[cumul_b < 0.025]):length(cumul_b[cumul_b < 0.975])]
+x_plot_b <- seq(l_bound_b, u_bound_b, length.out=length(y_ribbon_b))
+
+plot_b <- ggplot() +  theme_linedraw() +
+    geom_line(aes(x = b,y =  p_b_D), color='navy', lwd=1.5) + 
+    geom_line(aes(x = b,y =  p_b_aD), color='darkorange', linetype='dashed', lwd=1.5) +
+    labs(title='Plot of P(b|D) and P(b|a,D)', x='b', y='Probability density', subtitle= sprintf('w = %.2f, a/b = %.3s', w, a_/b_)) +
+    geom_ribbon(aes(x = x_plot_b, ymin=0, ymax=y_ribbon_b), fill='thistle2', alpha=0.4) +
+    geom_vline(aes(xintercept=l_bound_b),  color='black', linetype='dashed', lwd=1.2) +
+    geom_vline(aes(xintercept=u_bound_b), linetype='dashed', lwd=1.2, color='black') +
+             theme(plot.title = element_text(size=20),
+                  plot.subtitle = element_text(size=15),
+                  axis.text.x = element_text(size=15), 
+                  axis.text.y = element_text(size=15),
+                  axis.title.x = element_text(size=16),
+                  axis.title.y = element_text(size=16))
+                  
+# Compute mean , standard deviation , covariance , correlation , of A and B
+mean_a <- delta_a * sum(a * p_a_D)
+mean_b <- delta_b * sum(b * p_b_D)
+sd_a <- sqrt( delta_a * sum((a-mean_a)^2 * p_a_D) ) 
+sd_b <- sqrt( delta_b * sum((b-mean_b)^2 * p_b_D) )
+
+
+# Covariance normalization 
+# The normalization constant is Z = delta_a*delta_b*sum(exp(z)).
+# This is independent of (a,b) so can be calculated outside of the loops. 
+cov_ab <- 0
+for(j in 1:length(a)) {
+    for(k in 1:length(b)) {
+        cov_ab <- cov_ab + (a[j]-mean_a)*(b[k]-mean_b)*exp(z[j,k])
+    }
+}
+
+cov_ab <- cov_ab / sum(exp(z)) 
+rho_ab <- cov_ab / (sd_a * sd_b)
+
+
+return(list(plot, plot_a, plot_b, c(mean_a, sd_a), c(mean_b, sd_b), rho_ab))
+
+}
+
+```
+
+Check results changing the resolution $$ \omega =  \{ 0.1, 0.25, 1, 2, 3 \} $$
+maintaining the ratio a/b constant = 2.
+
+```{r, fig.align="center", fig.width=15 , fig.height=10}
+
+#function signal_background(a, b, x0, w, t)
+
+results_01 = signal_backround(2, 1, 0, 0.1, 5)
+results_025 = signal_backround(2, 1, 0, 0.25, 5)
+results_1 = signal_backround(2, 1, 0, 1, 5)
+results_2 = signal_backround(2, 1, 0, 2, 5)
+results_3 = signal_backround(2, 1, 0, 3, 5)
+
+grid.arrange(results_01[[2]], results_025[[2]],results_1[[2]], results_2[[2]], results_3[[2]], nrow=2)
+
+grid.arrange(results_01[[3]], results_025[[3]],results_1[[3]], results_2[[3]], results_3[[3]], nrow=2)
+
+```
+```{r}
+
+ret <- list(results_01, results_025, results_1, results_2, results_3)
+w <- c(0.1, 0.25, 1, 2, 3)
+a_b <- rep(2, 5)
+
+for (i in 1:5){
+    cat(sprintf("w = %.2f and a_true/b_true = %.2s --> a = ", w[i], a_b[i]), ret[[i]][[4]][1], "±", ret[[i]][[4]][2], "\n") 
+    cat(sprintf("w = %.2f and a_true/b_true = %.2s --> b = ", w[i], a_b[i]), ret[[i]][[5]][1], "±", ret[[i]][[5]][2], "\n") 
+    cat(sprintf("w = %.2f and a_true/b_true = %.2s --> ρ = ", w[i], a_b[i]), ret[[i]][[6]], "\n\n")
+}
+
+```
+Now I analyze changing the ratio a/b but maintaining 
+the resolution ω = 1 constant.
+
+```{r fig.align="center", fig.width=15 , fig.height=10}
+
+#function signal_background(a, b, x0, w, t)
+
+results_1.5 = signal_backround(1.5, 1, 0, 1, 5)
+results_2 = signal_backround(2, 1, 0, 1, 5)
+results_2.5 = signal_backround(2.5, 1, 0, 1, 5)
+results_3 = signal_backround(3, 1, 0, 1, 5)
+
+grid.arrange(results_1.5[[2]], results_2[[2]],results_2.5[[2]], results_3[[2]], nrow=2)
+
+grid.arrange(results_1.5[[3]], results_2[[3]],results_2.5[[3]], results_3[[3]], nrow=2)
+
+```
+
+```{r}
+ret <- list(results_1.5, results_2, results_2.5, results_3)
+w <- rep(1, 4)
+a_b <- c(1.5, 2, 2.5, 3)
+
+for (i in 1:4){
+    cat(sprintf("w = %.2f and a_true/b_true = %.2s --> a = ", w[i], a_b[i]), ret[[i]][[4]][1], "±", ret[[i]][[4]][2], "\n") 
+    cat(sprintf("w = %.2f and a_true/b_true = %.2s --> b = ", w[i], a_b[i]), ret[[i]][[5]][1], "±", ret[[i]][[5]][2], "\n") 
+    cat(sprintf("w = %.2f and a_true/b_true = %.2s --> ρ = ", w[i], a_b[i]), ret[[i]][[6]], "\n\n")
+}
+
+```

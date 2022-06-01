@@ -1,0 +1,256 @@
+---
+title: "R Laboratory 3"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2)
+```
+
+
+
+## Exercise 1
+
+• The triangular distribution, in the interval (a, b), is given by the following:
+
+$$    
+f (X) =     
+  \begin{cases}
+  \frac{2(x − a)}{(b − a)(c − a)} & if \quad a \leq x < c \\
+  \frac{2(b − x)}{(b − a)(b − c)} & if \quad c \leq x \leq b \\
+   0 & \text{otherwise}
+\end{cases}
+$$
+
+a) plot the function, given the interval (a, b)
+
+b) and write an algorithm to generate random numbers from the triangular distr.
+
+c) generate 10^4 random number from the distribution, show them in an histogram
+and superimpose the analytical curve
+
+
+```{r fig.align="center", fig.width=8 , fig.height=6}
+
+triang <- function(x,a=-3,b=3,c=0){
+  ifelse((x < c & x >= a) , 2*(x-a)/((b-a)*(c-a)),
+         ifelse((x <= b & x >= c) , 2*(b-x)/((b-a)*(b-c)), 0))
+}
+
+a <- -4
+b <- 4
+
+x_ax <- seq(a,b , length=103)
+y_ax <- triang(x_ax , a , b)
+
+plot <- ggplot() + theme_linedraw() + 
+                  geom_line(aes(x=x_ax, y=y_ax), stat='identity', color="steelblue", lwd=2)
+plot <- plot + ggtitle('Triangular Distribution') + labs(x="x", y="y") +                                                            theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+plot
+
+#----------
+#b)
+
+cum_tr <- function(x,a,b,c){
+    integral <- numeric(length(x))
+    for (i in seq_along(x)){
+      integral[i] <- integrate(triang, lower=a , upper = x[i], a,b)$value
+    }
+    return(integral)
+   }
+
+x_ax2 <- seq(a,b, length=100)
+y_ax2 <- cum_tr(x_ax2, a, b, 0)
+ 
+plot <- ggplot() + theme_linedraw() + 
+                  geom_line(aes(x=x_ax2, y=y_ax2), stat='identity', color="firebrick3", lwd=2)
+plot <- plot + ggtitle('Cumulative Distribution') + labs(x="x", y="y") +                                                            theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+plot
+
+inverse <- function(y, a,b,c){
+  uniroot(function(x){ cum_tr(x,a,b,c) - y }, lower=-4 , upper=4)$root
+}
+
+# Quantile function
+q_triang <- function(y, a,b,c, lower.value=-4, upper.value=4){
+  output <- numeric(length(y))
+  
+  for (i in seq_along(y)){
+    if (y[i]==1) output[i] <- upper.value      
+    else if (y[i]==0) output[i] <- lower.value
+    else output[i] <- inverse(y[i],a,b,c)
+  }
+  return(output)
+}
+
+
+rand_tr <- function(n, a, b, c){
+  return(q_triang(runif(n), a,b,c))
+}
+
+
+pdf <- rand_tr(10^4, a, b, 0)
+
+plot <- ggplot() + theme_linedraw() + 
+                  geom_histogram(aes(x=pdf, y=..density..), fill='navy', alpha=0.7, bins = 50, color='black') +
+                  geom_line(aes(x=x_ax, y=y_ax), stat='identity', color="firebrick3", lwd=2)
+plot <- plot + ggtitle('Triangular pdf superimposed with analytical form') + labs(x="x", y="y") +                                   theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+plot
+  
+  
+```
+
+## Exercise 2 - Markov’s inequality
+
+• Markov’s inequality represents an upper bound to probability distributions:
+
+$$
+             
+P(X \geq k) \leq \frac{E[X]}{k} \quad    for \   \ k > 0
+        
+$$
+
+               
+• having defined a function         $$  G(k) = 1 − F(k) ≡ P(X \geq k) $$
+
+
+plot G(k) and the Markov’s upper bound for
+
+a) the exponential, Exp(λ = 1), distribution function
+
+b) the uniform, U (3, 5), distribution function
+
+c) the binomial, Bin(n = 1, p = 1/2), distribution function
+
+d) a Poisson, Pois(λ = 1/2), distribution function
+
+
+```{r fig.align="center", fig.width=10 , fig.height=7}
+
+G <- function(cdf){
+  return (1 - cdf)
+}
+
+markov_ub <- function(k, expec_val){
+  return(expec_val/k)
+}
+
+pl_funct <- function(k_val , cdf , expec_val, pl_title="Markov's Inequality", xlab='x'){
+
+   ggplot() + theme_linedraw() + 
+       geom_line(aes(x=k_val, y=markov_ub(k,expec_val), color='Markov\'s UpperBound'), linetype="dashed", lwd=1.5) +
+       geom_line(aes(x=k_val, y=G(cdf), color="G(k)"), lwd=1.5) +
+     labs(color='') +  theme(legend.text=element_text(size=12)) +
+        ggtitle(pl_title)+ labs( x=xlab, y="y") +  
+             theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+}
+
+
+k <- seq(1, 10, length = 100)
+pl_funct(k, cdf=pexp(k, 1),expec_val=1, pl_title="Markov's Inequality for Exp Distribution with lambda=1")   + xlim(0,10)
+
+k<- seq(0,7, length=100)
+pl_funct(k, cdf=punif(k, 3,5),expec_val=(3+5)/2, pl_title="Markov's Inequality for Uniform Distribution (3,5)") + xlim(0,8) + ylim(0,2.5)
+
+k<- seq(0,7, length=100)
+pl_funct(k, cdf=pbinom(k , 1, 1/2),expec_val=1*1/2, pl_title="Markov's Inequality for Binomial Distribution (n=1 , prob=1/2)")  + xlim(0,7.3)  + ylim(0,2.5)
+
+k<- seq(0,7, length=100)
+pl_funct(k, cdf=ppois(k, 1/2),expec_val=1/2, pl_title="Markov's Inequality for Poisson Distribution with lambda=1/2") + xlim(0,7.3) + ylim(0,2.5)
+
+```
+
+
+## Exercise 3 - Chebyshev’s inequality
+
+• Chebyshev’s inequality tell us that
+
+$$
+P( | X − μ | \geq kσ) \leq \frac{1}{k^2}
+$$
+
+• which can also be written as
+
+$$
+P( |X − μ |< kσ) \geq 1 − \frac{1}{k^2}
+$$
+
+• use R to show, with a plot, that Chebyshev’s inequality is is an upper bound to the
+following distributions:
+
+a) a normal distribution, N(μ = 3, σ = 5)
+
+b) an exponential distribution, Exp(λ = 1)
+
+c) a uniform distribution U (1 − √2, 1 + √2)
+
+d) a Poisson, Pois(λ = 1/3), distribution function
+
+
+```{r fig.align="center", fig.width=10 , fig.height=7}
+
+
+cum_ksigma <- function(k , cdf, mu, sigma){
+  return(cdf(mu - k*sigma) + 1 -cdf(mu + k*sigma))
+}
+
+cheb_ub <- function(k){
+  return((1/k^2))
+}
+
+
+
+
+pl_funct2 <- function(x_val , cdf , mu , sigma, pl_title="Chebyshev's Inequality", xlab='x'){
+
+   ggplot() + theme_linedraw() + 
+       geom_line(aes(x=x_val, y=cheb_ub(x_val) , color=' Chebyshev\'s Bound'),  linetype="dashed" , lwd=1.5) +
+       geom_line(aes(x=x_val, y=cum_ksigma(x_val,cdf,mu,sigma), color='P_kSigma'), lwd=1.5) +
+        ggtitle(pl_title)+ labs( x=xlab, y="y") + labs(color='') +                                               theme(legend.text=element_text(size=12)) +
+             theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12))
+}
+
+x_ax <- seq(0, 10, by=0.1)
+mean <- 3
+sigma <- 5
+pl_funct2(x_ax, function(x) pnorm(x, mean=mean, sd=sigma), mu=mean, sigma=sigma, pl_title="Chebyshev's Inequality for Normal Distribution (3,5) ")  + ylim(0,4)
+
+
+lambda <- 1
+mean <- 1/lambda
+sigma <- 1/lambda^2
+pl_funct2(x_ax, function(x) pexp(x, rate=lambda) , mu=mean, sigma=sigma, pl_title="Chebyshev's Inequality for Exponential Distribution lambda=1 ")  + ylim(0,3)
+
+
+minim <- 1 - sqrt(2)
+maxim <- 1 + sqrt(2)
+mean <- (maxim + minim ) / 2
+sigma <- sqrt((maxim - minim)^2/12)
+pl_funct2(x_ax, cdf= function(x) punif(x, min=minim, max=maxim) , mu=mean, sigma=sigma, pl_title="Chebyshev's Inequality for Uniform Distribution (1 − √2, 1 + √2)) ")  + ylim(-0.2,2) 
+
+lambda <- 1/3
+mean <- lambda
+sigma <- sqrt(lambda)
+pl_funct2(x_ax, cdf= function(x) ppois(x, lambda=lambda) , mu=mean, sigma=sigma, pl_title="Chebyshev's Inequality for Poisson Distribution (lambda = 1/3) ")  + ylim(-0.2,2) 
+
+```

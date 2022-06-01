@@ -1,0 +1,1043 @@
+---
+title: "R Laboratory 6"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2)
+library(latex2exp)
+library(coda)
+library(rjags)
+```
+
+
+
+## Exercise 1
+
+• a well established and diffused method for detecting a disease in blood fails 
+to detect the presence of disease in 15% of the patients that 
+actually have the disease.
+
+• A young UniPD startUp has developed an innovative method of screening. 
+During the qualification phase, a random sample of n = 75 patients known 
+to have the disease is screened using the new method.
+
+(a) what is the probability distribution of y, the number of times the 
+new method fails to detect the disease ?
+
+If $p$ is the probability of a failure with the new method
+$$ P(y|p,n) = {n \choose y} \cdot p^y \cdot (1-p)^{n-y} $$
+
+(b) on the n = 75 patients sample, the new method fails to detect the 
+disease in y = 6 cases. What is the frequentist estimator of the failure 
+probability of the new method ?
+
+An unbiased frequentist estimator of the failure is:
+$$ p_{fail} = \frac{y}{n} = \frac{6}{75} = 0.08 = 8 \% $$
+
+(c) setup a bayesian computation of the posterior probability, assuming a 
+beta distribution with mean value 0.15 and standard deviation 0.14. 
+Plot the posterior distribution for the probability of y, and mark on the plot 
+the mean value and variance
+
+Considering a Beta distribution:
+$$ \mu = \frac{\alpha}{\alpha + \beta} \quad ,  \quad \sigma^2= \frac{\alpha\beta}{(\alpha + \beta)^2 \cdot (\alpha+\beta+1)} $$
+These equations lead to:
+
+$$ \alpha = - \frac{\mu(\sigma^2 + \mu^2 - \mu)}{\sigma^2} \quad ,  \quad \beta = \frac{(\sigma^2 + \mu^2 -\mu)(\mu -1)}{\sigma^2}$$
+ 
+(d) Perform a test of hypothesis assuming that if the probability of failing 
+to the detect the disease in ill patients is greater or equal than 15%, the 
+new test is no better that the traditional method.
+
+Test the sample at a 5% level of significance in the Bayesian way.
+
+(e) Perform the same hypothesis test in the classical frequentist way.
+
+
+```{r fig.align="center",fig.width=10 , fig.height=6}
+
+n_sample <- 75
+
+#b)
+y=6
+p_new_fail <- y/n_sample
+cat("Probability to fail with the new method",p_new_fail)
+
+#c)
+
+x_data <- 500
+x_ax <- seq(0,1, length.out = x_data)
+
+mu <- 0.15
+sigma <- 0.14
+
+alpha_prior <- (-mu*(sigma^2 + mu^2 - mu))/(sigma^2)
+beta_prior <- ((sigma^2 + mu^2 - mu)*(mu -1))/(sigma^2)
+
+cat("Prior Parameters:
+    \t alpha = ", round(alpha_prior, 4),"
+    \t beta =", round(beta_prior,4),"\n")
+
+#beta prior is a conjugate of a binomial likelihood -> beta posterior
+
+alpha_posterior <- alpha_prior + y
+beta_posterior <- beta_prior + n_sample - y
+
+mu_post <- (alpha_posterior)/(alpha_posterior + beta_posterior)
+var_post <- (alpha_posterior*beta_posterior)/( ((alpha_posterior + beta_posterior)^2)*(alpha_posterior + beta_posterior + 1))
+ 
+cat("Posterior Parameters:
+    \t alpha = ", round(alpha_posterior, 4),"
+    \t beta =", round(beta_posterior ,4),"
+    \t mu =", round(mu_post,4),"
+    \t var =", round(var_post,6))
+
+
+posterior <- function(x){ dbeta(x,alpha_posterior,beta_posterior) }
+
+
+plot <- ggplot() + theme_linedraw() +
+  geom_line(aes(x=x_ax, y=posterior(x_ax), color='Beta Posterior'), lwd=1.5) +
+  geom_vline( aes(xintercept = mu_post, color = 'Mean') , linetype='dashed', lwd=1.2)+
+  annotate('text', x=mu_post+0.14, y=12, label=paste('Mean = ', round(mu_post, 4)), size=5)+
+            ggtitle(" Beta Posterior Function")+
+            labs(x="p", y='P(p|y,n)', color='Legend') +
+                        theme(legend.text=element_text(size=12))+
+                          theme(plot.title = element_text(size=20),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=15),
+                          axis.title.y = element_text(size=15)) +
+     scale_color_manual(values = c( 'Beta Posterior' = 'firebrick4', 'Mean'='black'))
+
+plot
+```
+Null Hypotesis that the probability of failing in the detection of the disease is greater or equal than the one with the old method, i.e. 15%
+
+```{r fig.align="center",fig.width=10 , fig.height=6}
+plot <- ggplot() + theme_linedraw() +
+  geom_line(aes(x=x_ax, y=posterior(x_ax), color='Beta Posterior'), lwd=1.5) +
+  geom_vline( aes(xintercept = 0.15, color = 'Prob = 15%') , linetype='dashed', lwd=1.2)+
+  annotate('text', x=0.15+0.115, y=12, label=paste('Null Hyp = 0.15'), size=5)+
+geom_ribbon(aes(x=seq(0.15,1,0.01),ymin=0,ymax=dbeta(seq(0.15,1,0.01),alpha_posterior,beta_posterior)),alpha=0.4,fill ='coral')   + ggtitle(" Beta Posterior Function")+
+            labs(x="p", y='P(p|y,n)', color='Legend') +
+                        theme(legend.text=element_text(size=12))+
+                          theme(plot.title = element_text(size=20),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=15),
+                          axis.title.y = element_text(size=15)) +
+     scale_color_manual(values = c( 'Beta Posterior' = 'navy', 'Prob = 15%'='black'))
+
+plot
+
+
+prob <- integrate(posterior, lower=0.15,upper = 1)
+
+cat("The zone of interest corresponds to a Probability of", round(prob$value ,4))
+
+if(prob$value < 0.05){
+  cat("The value of the integral is smaller than the alpha level of significance (5%), so we reject the null hypotesis")
+} else{
+  cat("The value of the integral is greater than the alpha level of significance (5%), so we can not reject the null hypotesis")
+}
+
+
+```
+```{r fig.align="center",fig.width=10 , fig.height=6, warning=FALSE}
+
+p_null <- 0.15
+y_vec <- 0:25
+
+plot <- ggplot() + theme_linedraw() +
+  geom_col(aes(x=y_vec, y=dbinom(y_vec, size = n_sample, prob=p_null)), color='white', fill='steelblue4', alpha=0.7) +
+  geom_col(aes(x=6, y=dbinom(6, size = n_sample, prob=p_null)), color='white', fill='darkorange', alpha=0.9) +
+  geom_hline(yintercept=0.05, color='firebrick3', linetype='dashed', size=0.9)+
+  annotate('text', x=3, y=0.055, label='alpha = 0.05', size=5)+
+     ggtitle("Frequentist Hypothesis Testing") +
+            labs(x="y_values", y='P(y|p=0.15 , n=75)') +
+                          theme(plot.title = element_text(size=20),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=15),
+                          axis.title.y = element_text(size=15))+
+                      scale_x_discrete(limits=(0:25), labels=0:25)
+
+plot
+```
+$y=6$ lies in the rejected region, so we can reject the null hypothesis $H_0$
+also with the frequentist approach
+
+For the Fisher's Method we need to calculate the p-value:
+$$ p\text{-}value = \sum_{y=0}^{6}{P(y|p_0,n)} = \sum_{y=0}^{6}{Binom(y|p_0,n)}$$
+
+```{r}
+#Fisher's Method 
+
+p_val <- pbinom(6, size=n_sample, prob=p_null)
+
+cat("The calculated p-value is -->", round(p_val,4))
+if(p_val < 0.05){
+  cat("The p-value is smaller than the alpha level of significance (5%), so we reject the null hypotesis")
+} else{
+  cat("The p-value is greater than the alpha level of significance (5%), so we can not reject the null hypotesis")
+}
+
+```
+
+## Exercise 2
+
+• Ladislaus Josephovich Bortkiewicz was a Russian economist and statistician. 
+He noted that the Poisson distribution can be very useful in applied statistics
+when describing low-frequency events in a large population. 
+In a famous example he showed that the number of deaths by horse kick
+among the Prussian army follows the Poisson distribution.
+
+• Considering the following to sets of observations taken over a fixed large 
+time interval in two different corps:
+
++-------------------+------+------+------+------+------+----------+
+| y death soldiers  | 0    | 1    | 2    | 3    | 4    | $\geq$ 5 |
++:=================:+:====:+:====:+:====:+:====:+:====:+:========:+
+| $n_1$ observations| 109  | 65   | 22   | 3    | 1    | 0        |
+|                   |      |      |      |      |      |          |
++-------------------+------+------+------+------+------+----------+
+| $n_2$ observations| 144  | 91   | 32   | 11   | 2    | 0        |
+|                   |      |      |      |      |      |          |
++-------------------+------+------+------+------+------+----------+
+
+(a) assuming a uniform prior, compute and plot the posterior distribution for λ, 
+the death rate over the measurement time. Determine the posterior mean, 
+median and variance, and compute the 95% credibility interval.
+
+Assuming a uniform prior, with a Poisson distribution, the posterior becomes a 
+Gamma distribution $Gamma(\alpha,\beta)$ with: $$\alpha = \sum_{i}{y_i + 1} \quad , \quad \beta = n$$
+where $n$ is the number of observations.
+
+$$ n = \sum_{i=0}^4{ \big[(n_1)_i + (n_2)_i\big]} \quad , \quad \sum_{i}{y_i} = \sum_{i=0}^4{ i \cdot \big[(n_1)_i + (n_2)_i \big]}  $$
+(b) assuming now a Jeffreys’ prior,
+
+$$ g(\lambda) \propto \frac{1}{\sqrt{\lambda}} , \quad \text{with  } \lambda > 0$$
+
+compute and plot the posterior distribution for λ, the death rate 
+over the measurement time.
+
+Determine the posterior mean, median and variance, and compute
+the 95% credibility interval.
+
+
+```{r fig.align="center",fig.width=10 , fig.height=6}
+
+deaths <- c(0,1,2,3,4,5)
+n1 <- c(109,65,22,3,1,0)
+n2 <- c(144,91,32,11,2,0)
+
+
+alpha_post <- sum(deaths*(n1 + n2)) + 1
+beta_post <- sum(n1 + n2)
+
+x_ax <- seq(0.25, 1, 0.001)
+
+posterior_gamma <- dgamma(x_ax, shape = alpha_post, rate = beta_post)
+mean_post_u <- alpha_post/beta_post
+var_post_u <- alpha_post/(beta_post^2)
+median_post_u <- qgamma(0.5, shape = alpha_post, rate = beta_post)
+
+l_bound_CI_u <- qgamma(0.025, shape = alpha_post, rate = beta_post)
+u_bound_CI_u <- qgamma(0.975, shape = alpha_post, rate = beta_post)
+
+cat("Posterior Parameters - with Uniform:
+    \t alpha = ", round(alpha_post, 4),"
+    \t beta =", round(beta_post ,4),"
+    \t mean =", round(mean_post_u,4),"
+    \t var =", round(var_post_u,6),"
+    \t median =", round(median_post_u,4))
+
+cat("95 % Credibility Interval :
+    \t", l_bound_CI_u, "-", u_bound_CI_u)
+
+x_area <- seq(l_bound_CI_u, u_bound_CI_u, 0.001)
+y_ribbon <- dgamma(x_area, shape = alpha_post, rate = beta_post)
+
+
+plot <- ggplot() + theme_linedraw() + 
+       geom_line(aes(x=x_ax, y=posterior_gamma), color='navy', lwd=1.5) +
+        geom_vline(xintercept = l_bound_CI_u , linetype='dashed', lwd=0.8) +
+        geom_vline(xintercept = u_bound_CI_u , linetype='dashed', lwd=0.8) +
+        geom_ribbon(aes(x=x_area, ymin=0 , ymax=y_ribbon), alpha =0.3, fill ='coral') +
+     ggtitle("Gamma Posterior Function - Uniform Prior")+ 
+        labs( x=TeX('$\\lambda$ values'), y='Posterior PDF', 
+           subtitle="With 95% Credibility Interval" )+                                
+                  theme(plot.title = element_text(size=20),
+                  plot.subtitle = element_text(size=14),                   
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=15),
+                  axis.title.y = element_text(size=15))
+
+plot
+
+
+
+```
+Assuming this time a Jeffrey's prior, with a Poisson distribution, the posterior becomes a 
+Gamma distribution $Gamma(\alpha,\beta)$ with: $$\alpha = \sum_{i}{y_i + \frac{1}{2}} \quad , \quad \beta = n$$
+where $n$ is the number of observations.
+
+```{r fig.align="center",fig.width=10 , fig.height=6}
+
+#Now with the Jeffrey's Prior 
+
+alpha_post <- sum(deaths*(n1 + n2)) + 1/2
+beta_post <- sum(n1 + n2)
+
+x_ax <- seq(0.25, 1, 0.001)
+
+posterior_gamma <- dgamma(x_ax, shape = alpha_post, rate = beta_post)
+mean_post_j <- alpha_post/beta_post
+var_post_j <- alpha_post/(beta_post^2)
+median_post_j <- qgamma(0.5, shape = alpha_post, rate = beta_post)
+
+l_bound_CI_j <- qgamma(0.025, shape = alpha_post, rate = beta_post)
+u_bound_CI_j <- qgamma(0.975, shape = alpha_post, rate = beta_post)
+
+cat("Posterior Parameters - with Jeffrey's:
+    \t alpha = ", round(alpha_post, 4),"
+    \t beta =", round(beta_post ,4),"
+    \t mean =", round(mean_post_j,4),"
+    \t var =", round(var_post_j,6),"
+    \t median =", round(median_post_j,4))
+
+cat("95 % Credibility Interval :
+    \t", l_bound_CI_j, "-", u_bound_CI_j)
+
+x_area <- seq(l_bound_CI_j, u_bound_CI_j, 0.001)
+y_ribbon <- dgamma(x_area, shape = alpha_post, rate = beta_post)
+
+
+plot <- ggplot() + theme_linedraw() + 
+       geom_line(aes(x=x_ax, y=posterior_gamma), color='firebrick2', lwd=1.5) +
+        geom_vline(xintercept = l_bound_CI_j , linetype='dashed', lwd=0.8) +
+        geom_vline(xintercept = u_bound_CI_j , linetype='dashed', lwd=0.8) +
+        geom_ribbon(aes(x=x_area, ymin=0 , ymax=y_ribbon), alpha =0.3, fill ='khaki2') +
+     ggtitle("Gamma Posterior Function - Jeffrey's Prior")+ 
+        labs( x=TeX('$\\lambda$ values'), y='Posterior PDF', 
+           subtitle="With 95% Credibility Interval" )+                                
+                  theme(plot.title = element_text(size=20),
+                  plot.subtitle = element_text(size=14),                   
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=15),
+                  axis.title.y = element_text(size=15))
+
+plot
+
+```
+
+```{r}
+df <- data.frame(row.names=c("Uniform Prior","Jeffrey's Prior"))
+
+df["Mean"] <- c(mean_post_u, mean_post_j)
+df["Variance"] <- c(var_post_u, var_post_j)
+df["Median"] <- c(median_post_u, median_post_j)
+df["Lower_Bound_CI"] <- c(l_bound_CI_u, l_bound_CI_j)
+df["Upper_Bound_CI"] <- c(u_bound_CI_u, u_bound_CI_j)
+
+is.num <- sapply(df, is.numeric)
+df[is.num] <- lapply(df[is.num], round, 4)
+
+df
+
+```
+## Exercise 3
+
+• A study on water quality of streams, a high level of bacter X was defined
+as a level greater than 100 per 100 ml of stream water.
+n = 116 samples were taken from streams having a high environmental impact 
+on pandas. Out of these, y = 11 had a high bacter X level.
+
+• indicating with p the probability that a sample of water taken from
+the stream has a high bacter X level,
+
+(a) find the frequentist estimator for p
+
+An unbiased frequentist estimator is:
+$$ p_{high-bacter} = \frac{y}{n} = \frac{11}{116} = 0.095 = 9,5 \% $$
+
+(b) using a Beta(1, 10) prior for p, calculate and posterior distribution 
+P (p | y)
+
+Posterior, Beta distribution with:
+$$ \alpha' = \alpha + y \quad ,  \quad \beta' = \beta + n - y$$
+(c) find the bayesian estimator for p, the posterior mean and variance, 
+and a 95% credible interval
+
+The bayesian estimator is the Posterior Mean
+$$ \hat{p}_B = \frac{\alpha'}{\alpha' + \beta'} \approx 0.0945$$
+
+(d) test the hypotesis : $H_0: p = 0.1$ versus $H1 : p \neq 0.1$
+at 5% level of significance with both the frequentist and bayesian approach
+
+• a new measurement, performed one month later on n = 165 water samples, 
+gives y = 9 high bacter X level
+
+(e) find the frequentist estimator for p
+
+An unbiased frequentist estimator is:
+$$ p_{high-bacter} = \frac{y}{n} = \frac{9}{165} = 0.0545 = 5,45 \% $$
+
+(f) find a bayesian estimator for p, assuming both a Beta(1, 10) prior for p,
+and assuming the posterior probability of the older measurement as the prior 
+for the new one.
+
+From the Beta(1,10) the Posterior will be a Beta distribution with:
+$$ \alpha' = \alpha + y \quad ,  \quad \beta' = \beta + n - y$$
+From the older Posterior Beta(12,115) the Posterior will be a Beta distribution with:
+$$ \alpha'' = \alpha_{old} + y \quad ,  \quad \beta'' = \beta_{old} + n - y$$
+(g) find the bayesian estimator for p, the posterior mean and variance,
+and a 95% credible interval
+
+The bayesian estimator is the Posterior Mean
+In the case of Beta(1,10) as prior:
+$$ \hat{p}_B = \frac{\alpha'}{\alpha' + \beta'} \approx 0.0568$$
+In the case of Beta(12,115) as prior:
+$$ \hat{p}_B = \frac{\alpha''}{\alpha'' + \beta''} \approx 0.0712$$
+
+(h) test the hypotesis : $H_0: p = 0.1$ versus $H1 : p \neq 0.1$
+at 5% level of significance with both the frequentist and bayesian approach
+
+```{r fig.align="center",fig.width=10 , fig.height=6}
+
+#a)
+n_sample <- 116
+y_hb <- 11
+
+f_estim <- y_hb/n_sample
+cat("The frequentist estimator for p, having an high bacter level is:", round(f_estim,3))
+
+#b)
+x_data <- 300
+x_ax <- seq(0,1,length.out = x_data)
+
+#beta prior Beta(1,10)
+alpha_prior <- 1
+beta_prior <- 10
+
+#beta prior is a conjugate of a binomial likelihood -> beta posterior
+
+alpha_posterior <- alpha_prior + y_hb
+beta_posterior <- beta_prior + n_sample - y_hb
+
+mu_post <- (alpha_posterior)/(alpha_posterior + beta_posterior)
+var_post <- (alpha_posterior*beta_posterior)/( ((alpha_posterior + beta_posterior)^2)*(alpha_posterior + beta_posterior + 1))
+ 
+cat("Posterior Parameters:
+    \t alpha = ", round(alpha_posterior, 4),"
+    \t beta =", round(beta_posterior ,4),"
+    \t mu (bayesian estim) =", round(mu_post,4),"
+    \t var =", round(var_post,6))
+
+
+posterior <- function(x){ dbeta(x,alpha_posterior,beta_posterior) }
+
+
+l_bound_CI <- qgamma(0.025, alpha_posterior, beta_posterior)
+u_bound_CI <- qbeta(0.975,  alpha_posterior, beta_posterior)
+
+
+cat("95 % Credibility Interval :
+    \t", l_bound_CI, "-", u_bound_CI)
+
+x_area <- seq(l_bound_CI, u_bound_CI, length.out = x_data)
+y_ribbon <- dbeta(x_area, alpha_posterior,  beta_posterior)
+
+
+
+plot <- ggplot() + theme_linedraw() +
+  geom_line(aes(x=x_ax, y=posterior(x_ax)), color='forestgreen', lwd=1.5) +
+       geom_vline(xintercept = l_bound_CI , linetype='dashed', lwd=0.8) +
+        geom_vline(xintercept = u_bound_CI , linetype='dashed', lwd=0.8) +
+        geom_ribbon(aes(x=x_area, ymin=0 , ymax=y_ribbon), alpha =0.3, fill ='coral') +
+            ggtitle("Beta Posterior Function") +
+            labs(x="p", y='P(p|y,n)', subtitle="With 95% Credibility Interval") +
+                        theme(legend.text=element_text(size=12))+
+                          theme(plot.title = element_text(size=20),
+                          plot.subtitle = element_text(size=14),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=15),
+                          axis.title.y = element_text(size=15))
+
+plot
+
+```
+```{r fig.align="center",fig.width=10 , fig.height=6}
+#Test the hyp H0 : p < 0.1
+
+plot <- ggplot() + theme_linedraw() +
+  geom_line(aes(x=x_ax, y=posterior(x_ax), color='Beta Posterior'), lwd=1.5) +
+   geom_vline(aes(xintercept = l_bound_CI , color='95 % CI'), linetype='dashed', lwd=0.8) +
+    geom_vline(aes(xintercept = u_bound_CI ,color='95 % CI'), linetype='dashed',  lwd=0.8) +
+  geom_vline( aes(xintercept = 0.1, color = 'Prob = 10%') , linetype='dashed', lwd=1.2)+
+  annotate('text', x=0.1+0.115, y=12, label=paste('Null Hyp = 0.1'), color='red', size=5)+
+geom_ribbon(aes(x=seq(0.1,1,0.01),ymin=0,ymax=dbeta(seq(0.1,1,0.01),alpha_posterior,beta_posterior)),alpha=0.4,fill ='coral')   + ggtitle(" Beta Posterior Function with Hyp H0")+
+            labs(x="p", y='P(p|y,n)', color='Legend') +
+                        theme(legend.text=element_text(size=12))+
+                          theme(plot.title = element_text(size=20),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=15),
+                          axis.title.y = element_text(size=15)) +
+     scale_color_manual(values = c( 'Beta Posterior' = 'navy', '95 % CI' = 'black', 'Prob = 10%'='red'))
+
+plot
+
+
+prob <- integrate(posterior, lower=0.10,upper = 1)
+
+cat("The Probability of the Null Hypothesis lies in the 95% CI ( (1 - alpha) * 100%)). \n So, with the Bayesian approach, we can not reject the Null Hyp") 
+
+cat("In fact the zone of interest corresponds to a Probability of", round(prob$value ,4))
+
+if(prob$value < 0.05){
+  cat("The value of the integral is smaller than the alpha level of significance (5%), so we reject the null hypotesis")
+} else{
+  cat("The value of the integral is greater than the alpha level of significance (5%), so we can not reject the null hypotesis")
+}
+```
+
+```{r fig.align="center",fig.width=10 , fig.height=6, warning=FALSE}
+
+p_null <- 0.1
+y_vec <- 0:25
+
+plot <- ggplot() + theme_linedraw() +
+  geom_col(aes(x=y_vec, y=dbinom(y_vec, size = n_sample, prob=p_null)), color='white', fill='lightsalmon', alpha=0.7) +
+  geom_col(aes(x=11, y=dbinom(11, size = n_sample, prob=p_null)), color='white', fill='steelblue4', alpha=0.9) +
+  geom_hline(yintercept=0.05, color='black', linetype='dashed', size=0.9)+
+  annotate('text', x=3, y=0.055, label='alpha = 0.05', size=5)+
+     ggtitle("Frequentist Hypothesis Testing") +
+            labs(x="y_values", y='P(y|p=0.1 , n=116)') +
+                          theme(plot.title = element_text(size=20),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=15),
+                          axis.title.y = element_text(size=15))+
+                      scale_x_discrete(limits=(0:25), labels=0:25)
+
+plot
+
+cat('We see that y=11 is in the acceptance region, then we do not reject the null hypothesis, \nin fact the value at y = 11 is:', round(dbinom(11, size = n_sample, prob = p_null),3), '> 0.05')
+
+```
+$y=11$ lies in the acceptance region, so we can not reject the null hypothesis $H_0$
+also with the frequentist approach
+
+Evaluating the p-value for the Fisher's Method :
+$$ p\text{-}value = \sum_{y=0}^{11}{P(y|p_0,n)} = \sum_{y=0}^{11}{Binom(y|p_0,n)}$$
+```{r}
+p_val <- pbinom(11,n_sample,p_null)+1-pbinom(n_sample-11-1, n_sample, p_null)
+
+cat("The calculated p-value is -->", round(p_val,4))
+
+
+if(p_val < 0.05){
+  cat("The p-value is smaller than the alpha level of significance (5%), so we reject the null hypotesis")
+} else{
+  cat("The p-value is greater than the alpha level of significance (5%), so we can not reject the null hypotesis")
+}
+```
+```{r fig.align="center",fig.width=12 , fig.height=7}
+
+#e)
+n_sample <- 165
+y_hb <- 9
+
+f_estim <- y_hb/n_sample
+cat("After the new measurement the frequentist estimator for p, having an high bacter level is:", round(f_estim,3))
+
+#f)
+x_data <- 300
+x_ax <- seq(0,1,length.out = x_data)
+
+#beta prior Beta(1,10)
+alpha_prior_1 <- 1
+beta_prior_1 <- 10
+
+#beta prior is a conjugate of a binomial likelihood -> beta posterior
+
+alpha_posterior_1 <- alpha_prior_1 + y_hb
+beta_posterior_1 <- beta_prior_1 + n_sample - y_hb
+
+mu_post_1 <- (alpha_posterior_1)/(alpha_posterior_1 + beta_posterior_1)
+var_post_1 <- (alpha_posterior_1*beta_posterior_1)/( ((alpha_posterior_1 + beta_posterior_1)^2)*(alpha_posterior_1 + beta_posterior_1 + 1))
+ 
+posterior_1 <- function(x){ dbeta(x,alpha_posterior_1,beta_posterior_1) }
+
+
+l_bound_CI_1 <- qgamma(0.025, alpha_posterior_1, beta_posterior_1)
+u_bound_CI_1 <- qbeta(0.975,  alpha_posterior_1, beta_posterior_1)
+
+
+#--------------------------------#
+#OLD Posterior as prior: Beta(12,115)
+alpha_prior_2 <- 12
+beta_prior_2 <- 115
+
+#beta prior is a conjugate of a binomial likelihood -> beta posterior
+
+alpha_posterior_2 <- alpha_prior_2 + y_hb
+beta_posterior_2 <- beta_prior_2 + n_sample - y_hb
+
+mu_post_2 <- (alpha_posterior_2)/(alpha_posterior_2 + beta_posterior_2)
+var_post_2 <- (alpha_posterior_2*beta_posterior_2)/( ((alpha_posterior_2 + beta_posterior_2)^2)*(alpha_posterior_2 + beta_posterior_2 + 1))
+ 
+
+posterior_2 <- function(x){ dbeta(x,alpha_posterior_2,beta_posterior_2) }
+
+
+l_bound_CI_2 <- qgamma(0.025, alpha_posterior_2, beta_posterior_2)
+u_bound_CI_2 <- qbeta(0.975,  alpha_posterior_2, beta_posterior_2)
+
+
+df <- data.frame(row.names=c("Prior : Beta(1,10)","Prior : Beta(12,115)"))
+
+df["alpha"] <- c(alpha_posterior_1 , alpha_posterior_2)
+df["beta"] <- c(beta_posterior_1 , beta_posterior_2)
+df["Mean - Bayesian Estim."] <- c(mu_post_1, mu_post_2)
+df["Variance"] <- c(var_post_1, var_post_2)
+df["Lower_Bound_CI"] <- c(l_bound_CI_1, l_bound_CI_2)
+df["Upper_Bound_CI"] <- c(u_bound_CI_1, u_bound_CI_2)
+
+
+is.num <- sapply(df, is.numeric)
+df[is.num] <- lapply(df[is.num], round, 4)
+
+df
+
+plot <- ggplot() + theme_linedraw() +
+  geom_line(aes(x=x_ax, y=posterior_1(x_ax), color='Beta Posterior from Beta(1,10)'), lwd=1.5) +
+  geom_line(aes(x=x_ax, y=posterior_2(x_ax), color='Beta Posterior from Beta(12,115)'), lwd=1.2, linetype= 'dashed') +
+            ggtitle(" Beta Posterior Functions")+
+            labs(x="p", y='P(p|y,n)', color='Legend') +
+                        theme(legend.text=element_text(size=12))+
+                          theme(plot.title = element_text(size=20),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=15),
+                          axis.title.y = element_text(size=15)) +
+     scale_color_manual(values = c( 'Beta Posterior from Beta(1,10)' = 'forestgreen', 
+                                    'Beta Posterior from Beta(12,115)'='orangered'))
+
+plot
+
+
+```
+
+```{r fig.align="center",fig.width=10 , fig.height=6 , warning=FALSE}
+
+p_null <- 0.1
+y_vec <- 0:25
+
+plot <- ggplot() + theme_linedraw() +
+  geom_col(aes(x=y_vec, y=dbinom(y_vec, size = n_sample, prob=p_null)), color='white', fill='springgreen4', alpha=0.7) +
+  geom_col(aes(x=9, y=dbinom(9, size = n_sample, prob=p_null)), color='white', fill='chocolate2', alpha=0.9) +
+  geom_hline(yintercept=0.05, color='black', linetype='dashed', size=0.9)+
+  annotate('text', x=3, y=0.055, label='alpha = 0.05', size=5)+
+     ggtitle("Frequentist Hypothesis Testing") +
+            labs(x="y_values", y='P(y|p=0.1 , n=165)') +
+                          theme(plot.title = element_text(size=20),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=15),
+                        axis.title.y = element_text(size=15)) +
+                      scale_x_discrete(limits=(0:25), labels=0:25)
+
+plot
+
+cat('We see that y=9 is in the rejection region, then we can not accept the null hypothesis, \nin fact the value at y = 9 is:', round(dbinom(9, size = n_sample, prob = p_null),3), '< 0.05')
+
+```
+$y=9$ lies in the rejection region, so we can not accept the null hypothesis $H_0$
+with the frequentist approach
+
+Evaluating the p-value for the Fisher's Method :
+$$ p\text{-}value = \sum_{y=0}^{9}{P(y|p_0,n)} = \sum_{y=0}^{9}{Binom(y|p_0,n)}$$
+```{r}
+p_val <- pbinom(9,n_sample,p_null)+1-pbinom(n_sample-9-1, n_sample, p_null)
+
+cat("The calculated p-value is -->", round(p_val,4))
+
+if(p_val < 0.05){
+  cat("The p-value is smaller than the alpha level of significance (5%), so we reject the null hypotesis")
+} else{
+  cat("The p-value is greater than the alpha level of significance (5%), so we can not reject the null hypotesis")
+}
+```
+With the Bayesian approach, I evaluate if the $p_0=0.1$ lies in the 
+Credibility Interval, obtained as $(1 - \alpha) \cdot 100\% = 95 \%$ for both
+of the Posterior Functions obtained from the two different Priors.
+
+If $p_0$ lies inside the CI --> I can not reject the Null Hypothesis $H_0$,
+otherwise, if it lies outside --> I can reject $H_0$
+
+```{r fig.align="center",fig.width=10 , fig.height=6}
+#Test the hyp H0 : p < 0.1 with Bayesian Approach
+
+#Beta(1,10) prior
+
+plot <- ggplot() + theme_linedraw() +
+  geom_line(aes(x=x_ax, y=posterior_1(x_ax), color='Beta Posterior from Beta(1,10)'), lwd=1.5) +
+   geom_vline(aes(xintercept = l_bound_CI_1 , color='95 % CI'), linetype='dashed', lwd=0.8) +
+    geom_vline(aes(xintercept = u_bound_CI_1 ,color='95 % CI'), linetype='dashed',  lwd=0.8) +
+  geom_vline( aes(xintercept = 0.1, color = 'Prob = 10%') , linetype='dashed', lwd=1.2)+
+  annotate('text', x=0.1+0.122, y=12, label=paste('Null Hyp = 0.1'), color='red', size=5)+
+geom_ribbon(aes(x=seq(0.1,1,0.01),ymin=0,ymax=dbeta(seq(0.1,1,0.01),alpha_posterior_1,beta_posterior_1)),alpha=0.4,fill ='coral')   + ggtitle(" Beta Posterior Function with Hyp H0")+
+            labs(x="p", y='P(p|y,n)', color='Legend') +
+                        theme(legend.text=element_text(size=12))+
+                          theme(plot.title = element_text(size=20),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=15),
+                          axis.title.y = element_text(size=15)) +
+     scale_color_manual(values = c( 'Beta Posterior from Beta(1,10)' = 'navy', '95 % CI' = 'black', 'Prob = 10%'='red'))
+
+plot
+
+cat("The Probability of the Null Hypothesis lies outside the 95% CI ( (1 - alpha) * 100%)). \n So, with the Bayesian approach, we can reject the Null Hyp")
+
+cat("95 % Credibility Interval :
+    \t", l_bound_CI_1, "-", u_bound_CI_1,"
+    \t \t p0 = 0.1 is outside")
+
+```
+```{r fig.align="center",fig.width=10 , fig.height=6}
+#Test the hyp H0 : p < 0.1 with Bayesian Approach
+
+#Beta(12,115) prior
+
+plot <- ggplot() + theme_linedraw() +
+  geom_line(aes(x=x_ax, y=posterior_2(x_ax), color='Beta Posterior from Beta(12,115)'), lwd=1.5) +
+   geom_vline(aes(xintercept = l_bound_CI_2 , color='95 % CI'), linetype='dashed', lwd=0.8) +
+    geom_vline(aes(xintercept = u_bound_CI_2 ,color='95 % CI'), linetype='dashed',  lwd=0.8) +
+  geom_vline( aes(xintercept = 0.1, color = 'Prob = 10%') , linetype='dashed', lwd=1.2)+
+  annotate('text', x=0.1+0.122, y=12, label=paste('Null Hyp = 0.1'), color='red', size=5)+
+geom_ribbon(aes(x=seq(0.1,1,0.01),ymin=0,ymax=dbeta(seq(0.1,1,0.01),alpha_posterior_2,beta_posterior_2)),alpha=0.4,fill ='coral')   + ggtitle(" Beta Posterior Function with Hyp H0")+
+            labs(x="p", y='P(p|y,n)', color='Legend') +
+                        theme(legend.text=element_text(size=12))+
+                          theme(plot.title = element_text(size=20),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=15),
+                          axis.title.y = element_text(size=15)) +
+     scale_color_manual(values = c( 'Beta Posterior from Beta(12,115)' = 'navy', '95 % CI' = 'black', 'Prob = 10%'='red'))
+
+plot
+
+
+cat("The Probability of the Null Hypothesis lies inside the 95% CI ( (1 - alpha) * 100%)). \n So, with the Bayesian approach, we can not reject the Null Hyp")
+
+cat("95 % Credibility Interval :
+    \t", l_bound_CI_2, "-", u_bound_CI_2,"
+    \t \t p0 = 0.1 is inside")
+
+
+```
+The results are different between the two cases:
+
+• with Beta(1,10) as a prior, we reject the null hyp $H_0$
+
+• with the old posterior Beta(12,115) as a prior, we accept $H_0$
+
+## Exercise 4
+
+• analyze the data of Exercise 1 using a MCMC with JAGS 
+   (solve only point a of Ex 1)
+   
+```{r fig.align="center",fig.width=10 , fig.height=5}
+mu_beta <- 0.15
+sigma_beta <- 0.14
+
+alpha_prior <- (-mu_beta*(sigma_beta^2 + mu_beta^2 - mu_beta))/(sigma_beta^2)
+beta_prior <- ((sigma_beta^2 + mu_beta^2 - mu_beta)*(mu_beta -1))/(sigma_beta^2)
+
+alpha_posterior <- alpha_prior + y_fail
+beta_posterior <- beta_prior + n_sample - y_fail
+
+posterior <- function(x){
+  dbeta(x, alpha_posterior, beta_posterior)
+}
+
+y_fail <- 6
+n_sample <- 75
+data_obs <- rep(c(1,0), c(y_fail, n_sample-y_fail) )
+
+data <- NULL
+data$a_prior <- alpha_prior
+data$b_prior <- beta_prior
+data$X <- data_obs
+data$n <- length(data_obs)
+
+
+model <- 'bugs/ex_1.bug'
+jm <- jags.model(model, data=data)
+
+# Update the Markov chain (Burn -in)
+update (jm , 1000)
+#Run MCMC
+chain <- coda.samples(jm , c("p"), n.iter=10000)
+s <- summary(chain)
+print(s)
+
+
+plot(chain, col="red3")
+
+chain.df <- as.data.frame( as.mcmc(chain) )
+head(chain.df)
+
+
+x_ax <- seq(0,1,0.001)
+
+plot <- ggplot() + theme_linedraw() +
+  geom_histogram(aes(chain.df$p, y=..density.., fill= 'Chain'), color='white', bins=100) +
+  geom_line( aes(x=x_ax, y=posterior(x_ax), color = 'Analytical Posterior') , linetype='dashed', lwd=1.2)+ ggtitle(" MarkovChainMonteCarlo Inference")+
+            labs(x="Probability Values", y='Posterior PDF', color='Legend', fill='') +
+                        theme(legend.text=element_text(size=12))+
+                          theme(plot.title = element_text(size=20),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=15),
+                          axis.title.y = element_text(size=15)) +
+     scale_color_manual(values = c('Analytical Posterior'='black'))
+
+plot
+```
+```{r}
+stat_values <- s$statistics
+
+df <- data.frame(row.names=c("Chain"))
+
+df["Mean"] <- stat_values[['Mean']]
+df["Sigma"] <- stat_values[['SD']]
+df["Median"] <- s$quantiles[['50%']]
+df["Lower_Bound_CI"] <- s$quantiles[['2.5%']]
+df["Upper_Bound_CI"] <- s$quantiles[['97.5%']]
+
+is.num <- sapply(df, is.numeric)
+df[is.num] <- lapply(df[is.num], round, 4)
+
+df
+```
+## Exercise 5
+
+• analyze the data of Exercise 2 using a MCMC with JAGS
+
+```{r fig.align="center",fig.width=10 , fig.height=5}
+deaths <- c(0,1,2,3,4,5)
+n1 <- c(109,65,22,3,1,0)
+n2 <- c(144,91,32,11,2,0)
+
+
+n_tot <- n1 + n2
+data_obs <- rep(deaths , n_tot)
+
+data <- NULL
+data$X <- data_obs
+
+
+model <- 'bugs/ex_2.bug'
+jm <- jags.model(model, data=data)
+
+# Update the Markov chain (Burn -in)
+update (jm , 1000)
+
+#Run MCMC
+chain <- coda.samples(jm , c("lambda"), n.iter=10000)
+s <- summary(chain)
+print(s)
+
+
+plot(chain, col="navy")
+
+chain.df <- as.data.frame( as.mcmc(chain) )
+head(chain.df)
+
+alpha_post <- sum(deaths*(n1 + n2)) + 1
+beta_post <- sum(n1 + n2)
+
+posterior <- function(x){
+  dgamma(x , shape = alpha_post, rate = beta_post)
+}
+
+x_ax <- seq(0.25,1, 0.001)
+
+plot <- ggplot() + theme_linedraw() +
+  geom_histogram(aes(chain.df$lambda, y=..density.., fill= 'Chain'), color='white', bins=100) +
+  geom_line( aes(x=x_ax, y=posterior(x_ax), color = 'Analytical Posterior') , linetype='dashed', lwd=1.2)+ ggtitle("MarkovChainMonteCarlo Inference - Poisson Process")+
+            labs(x="Probability Values", y='Posterior PDF', color='Legend', 
+                 subtitle="With Uniform Prior", fill='') +
+                        theme(legend.text=element_text(size=12))+
+                          theme(plot.title = element_text(size=20),
+                          plot.subtitle = element_text(size=14),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=15),
+                          axis.title.y = element_text(size=15)) +
+     scale_color_manual(values = c('Analytical Posterior'='black'))
+
+plot
+```
+```{r fig.align="center",fig.width=10 , fig.height=5}
+
+model <- 'bugs/ex_2_jef.bug'
+jm <- jags.model(model, data=data)
+
+# Update the Markov chain (Burn -in)
+update (jm , 1000)
+
+#Run MCMC
+chain_j <- coda.samples(jm , c("lambda"), n.iter=10000)
+s_j <- summary(chain_j)
+print(s_j)
+
+
+plot(chain_j, col="goldenrod2")
+
+chain_j.df <- as.data.frame( as.mcmc(chain_j) )
+head(chain_j.df)
+
+alpha_post <- sum(deaths*(n1 + n2)) + 1/2
+beta_post <- sum(n1 + n2)
+
+posterior_j <- function(x){
+  dgamma(x , shape = alpha_post, rate = beta_post)
+}
+
+x_ax <- seq(0.25,1, 0.001)
+
+plot <- ggplot() + theme_linedraw() +
+  geom_histogram(aes(chain_j.df$lambda, y=..density.., fill= 'Chain'), color='white', bins=100) +
+  geom_line( aes(x=x_ax, y=posterior_j(x_ax), color = 'Analytical Posterior') , linetype='dashed', lwd=1.2)+ ggtitle("MarkovChainMonteCarlo Inference - Poisson Process")+
+            labs(x="Probability Values", y='Posterior PDF', color='Legend',
+                 subtitle="With Jeffrey's Prior" , fill='') +
+                        theme(legend.text=element_text(size=12))+
+                          theme(plot.title = element_text(size=20),
+                          plot.subtitle = element_text(size=14),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=15),
+                          axis.title.y = element_text(size=15)) +
+     scale_color_manual(values = c('Analytical Posterior'='black'))
+
+plot
+
+```
+
+
+```{r}
+stat_values <- s$statistics
+stat_values_j <- s_j$statistics
+
+df <- data.frame(row.names=c("Chain - Uniform Prior","Chain - Jeffrey's Prior" ))
+
+df["Mean"] <- c(stat_values[['Mean']], stat_values_j[['Mean']])
+df["Sigma"] <- c(stat_values[['SD']], stat_values[['SD']])
+df["Median"] <- c(s$quantiles[['50%']], s_j$quantiles[['50%']])
+df["Lower_Bound_CI"] <- c(s$quantiles[['2.5%']],s_j$quantiles[['2.5%']])
+df["Upper_Bound_CI"] <- c(s$quantiles[['97.5%']],s_j$quantiles[['97.5%']])
+
+is.num <- sapply(df, is.numeric)
+df[is.num] <- lapply(df[is.num], round, 4)
+
+df
+```
+
+
+## Exercise 6
+
+• analyze the data of Exercise 3 using a MCMC with JAGS (solve point b and c)
+
+
+```{r fig.align="center",fig.width=10 , fig.height=5}
+n_sample <- 116
+y_hb <- 11
+
+data_obs <- rep(c(1,0), c(y_hb, n_sample-y_hb) )
+
+data <- NULL
+data$X <- data_obs
+data$n <- length(data_obs)
+
+
+model <- 'bugs/ex_3.bug'
+jm <- jags.model(model, data=data)
+
+# Update the Markov chain (Burn -in)
+update (jm , 1000)
+#Run MCMC
+chain <- coda.samples(jm , c("p"), n.iter=10000)
+s <- summary(chain)
+print(s)
+
+
+plot(chain, col="mediumpurple3")
+
+chain.df <- as.data.frame( as.mcmc(chain) )
+head(chain.df)
+
+#beta prior Beta(1,10)
+alpha_prior <- 1
+beta_prior <- 10
+
+alpha_posterior <- alpha_prior + y_hb
+beta_posterior <- beta_prior + n_sample - y_hb
+
+
+posterior <- function(x){
+  dbeta(x, alpha_posterior, beta_posterior)
+}
+
+x_data <- 300
+x_ax <- seq(0,1,length.out = x_data)
+
+plot <- ggplot() + theme_linedraw() +
+  geom_histogram(aes(chain.df$p, y=..density.., fill= 'Chain'), color='white', bins=100) +
+  geom_line( aes(x=x_ax, y=posterior(x_ax), color = 'Analytical Posterior') , linetype='dashed', lwd=1.2)+ ggtitle(" MarkovChainMonteCarlo Inference")+
+            labs(x="Probability Values", y='Posterior PDF', color='Legend', fill='') +
+                        theme(legend.text=element_text(size=12))+
+                          theme(plot.title = element_text(size=20),
+                          axis.text.x = element_text(size=10),
+                          axis.text.y = element_text(size=10),
+                          axis.title.x = element_text(size=15),
+                          axis.title.y = element_text(size=15)) +
+     scale_color_manual(values = c('Analytical Posterior'='black'))
+
+plot
+
+```
+```{r}
+
+plot(unname(autocorr(chain, lags=c(1:50))[[1]]))
+
+```
+
+
+
+```{r}
+stat_values <- s$statistics
+
+df <- data.frame(row.names=c("Chain"))
+
+df["Mean"] <- stat_values[['Mean']]
+df["Sigma"] <- stat_values[['SD']]
+df["Median"] <- s$quantiles[['50%']]
+df["Lower_Bound_CI"] <- s$quantiles[['2.5%']]
+df["Upper_Bound_CI"] <- s$quantiles[['97.5%']]
+
+is.num <- sapply(df, is.numeric)
+df[is.num] <- lapply(df[is.num], round, 4)
+
+df
+```
+

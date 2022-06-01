@@ -1,0 +1,642 @@
+---
+title: "R Laboratory 1"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  html_notebook: default
+---
+---------------------------------------------------------------------------------
+
+**Exercise 1 - Lakes of Scotland**
+
+• The table that can be found at 
+   https://en.wikipedia.org/wiki/List_of_lochs_of_Scotland
+ gives the volume, area, length and maximum and mean depths of some Scottish
+lakes. Create vectors, holding the lake’s name and all the parameters and build 
+a dataframe called scottish.lakes from the vectors
+
+1 evaluate the highest and lowest volume and area lake
+
+2 order the frame with respect to the area and determine the two largest 
+area lakes
+
+3 by summing up the areas occpupied by the lakes, determine the area of Scotland 
+covered by water
+
+```{r}
+scottish.lakes <- read.table('Data/LochLakes.csv', header=T , sep=',')
+
+head(scottish.lakes)
+#1 - evaluate the highest and lowest volume and area lake
+
+indmax1 <- which.max(scottish.lakes[,'Volume.km..'])
+indmax2 <- which.max(scottish.lakes[,'Area.km2.'])
+
+indmin1 <- which.min(scottish.lakes[,'Volume.km..'])
+indmin2 <- which.min(scottish.lakes[,'Area.km2.'])
+
+cat("The lake with the highest Volume is ", paste(scottish.lakes[indmax1,1]), " with ", max(scottish.lakes[,'Volume.km..'])," km3")
+
+
+cat("The lake with the highest Area is ", paste(scottish.lakes[indmax2,1]), " with ", max(scottish.lakes[,'Area.km2.'])," km2")
+
+
+cat("The lake with the Lowest Volume is ", paste(scottish.lakes[indmin1,1]), " with ", min(scottish.lakes[,'Volume.km..'])," km3")
+
+
+cat("The lake with the Lowest Area is ", paste(scottish.lakes[indmin2,1]), " with ", min(scottish.lakes[,'Area.km2.'])," km2")
+
+
+#------------------------------------------------------------------------------------------
+
+#2 - order the frame with respect to the area and determine the two largest area lakes
+
+scottish_order <- scottish.lakes[order(scottish.lakes[,'Area.km2.'] , decreasing = TRUE) , ]
+head(scottish_order)
+
+cat("The two lakes with the largest Area are ", scottish_order[1,'Loch'], " and " , scottish_order[2,'Loch'], " respectively with an Area of ", scottish_order[1,'Area.km2.'] , " and " , scottish_order[2,'Area.km2.'], " km2")
+
+#------------------------------------------------------------------------------------------
+
+#3 - by summing up the areas occupied by the lakes, determine the area of Scotland covered by water
+
+total_area <- sum(scottish.lakes[,'Area.km2.'])
+cat('The total area of Scotland occupied by water is equal to ', total_area , 'km2')
+
+```
+
+------------------------------------------------------------------------------------
+
+**Exercise 2 - Crude Oil Production**
+
+• The following CSV file
+https://drive.google.com/file/d/13WkinYhJNSr_XCldb3wpZOI0fgjer7Iw/view contains 
+data on crude oil prices from 1861 to 2020, measured in US dollars per barrel.
+
+1 Write R code that is able to read the file and import it in a data frame 
+structure. (Hint: before loading the file, open it with a text editor 
+and check its structure).
+
+2 produce a plot with the Oil price as a function of the year
+
+3 which is the highest price in history ? When did it occur ?
+
+3 plot the derivative of the curve, simply evaluated with the finite difference
+formula (forward derivative):    dprice / dyear = pricej+1 − pricej
+
+
+
+```{r}
+#1 - read data
+oil <- read.csv('Data/crude-oil-prices.csv')
+colnames(oil) <- c("Entity", "Code", "Year", "Price")   #more accessible
+
+#2 - produce a plot with the Oil price as a function of the year
+library(ggplot2)
+
+plot <- ggplot(oil, aes(x=Year , y=Price)) + theme_linedraw()
+plot <- plot + ggtitle('Crude Oil Price in $/barrel over Years')
+plot <- plot + labs(x="Year", y="Price($/barrel)")
+plot <- plot + theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12)) 
+plot + geom_line(color="red")
+#--------------------------
+#3 - which is the highest price in history? when did it occur?
+
+ind_pricemax <- which.max(oil[,'Price'])
+
+cat("The year with the highest price of crude oil is ", paste(oil[ind_pricemax,'Year']), " with ", max(oil[,'Price']),"$/barrel")
+#--------------------------
+#4 - plot the derivative of the curve
+
+price_deriv <- c(diff(oil[,'Price']), NA)
+
+plot2 <- ggplot(oil[1:nrow(oil)-1,], aes(x=Year , y=price_deriv[-length(price_deriv)]))
+plot2 <- plot2 + theme_linedraw() + ggtitle('Oil price derivative over time')
+plot2 <- plot2 + labs(x="Year", y="Price derivative")
+plot2 <- plot2 + theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12)) 
+plot2 + geom_line(color="navy")
+
+```
+
+
+---------------------------------------------------------------------------------
+
+**Exercise 3 - World Coal Production**
+
+• The following CSV file
+https://drive.google.com/file/d/1U1hK5o_d3vl8twwGaRJNcDJ79O9I5zJ1/view?usp=sharing
+
+contains data on the coal production (in TW · hour) for several countries 
+in the World.
+
+1 Write R code that is able to read the file and import it in a tibble structure
+
+2 count the number of countries available in the file and produce a barplot
+with the number of entries for each country
+
+For the following items select only the years ≥ 1970:
+3 selecting only the year after 1970, determine the total integrated production 
+for each country and print the top 5 Countries with highest coal productions
+
+4 for the 5 top Countries, create a plot of production as a function of time
+
+5 generate a plot with the cumulative sum of the World’s coal production
+over the years
+
+
+```{r fig.align="center", fig.width=8 , fig.height=5}
+#1 - read coal-production-by-country.csv and import in a tibble structure
+library(tibble)
+
+coal = tibble(read.csv("Data/coal-production-by-country.csv"))
+colnames(coal) <- c("Entity", "Code", "Year", "CoalProdTWh")   #more accessible
+head(coal)
+#----------------------
+#2 - count the number of countries available in the file and produce a barplot
+
+countries <- unique(coal[,'Entity'])
+cat("Counting , the number of avalaible countries in the file are " , nrow(countries))
+
+library(ggplot2)
+
+plot <- ggplot(coal, aes(x=Entity)) + theme_linedraw()
+plot <- plot + ggtitle('Number of entries for each country')
+plot <- plot + labs(x="Countries", y="Occurences") 
+plot <- plot + theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10, angle = 90, hjust = 1, vjust = 0.5), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12),
+                  aspect.ratio = 0.2)
+plot <- plot + scale_x_discrete(breaks =unique(coal$Entity)[c(TRUE, rep(FALSE, 5))])
+plot + geom_bar(width = 0.75, fill="steelblue")
+#----------------------
+#3 - only the years ≥ 1970: determine the total integrated production for each 
+#    country and print the top 5 Countries with highest coal productions
+
+coal_ <- coal[coal[,'Year'] >= 1970,]
+
+sum_by_country = aggregate(coal_[,'CoalProdTWh'], coal_[,'Entity'], sum)
+
+sum_df <- data.frame(sum_by_country[1], sum_by_country[2])                   
+colnames(sum_df) <- c("Country", "Tot_Prod")
+
+sum_df = sum_df[order(sum_df$Tot_Prod, decreasing=TRUE), ]
+row.names(sum_df) <- NULL
+
+print(sum_df[1:5,])
+
+not_countries <- c("World", "Asia Pacific", "Asia and Oceania", "OECD", "North America", "Eurasia", "Europe", "EU-28", "CIS", "South & Central AMerica", "USSR")
+
+top_5 = sum_df[!sum_df$Country %in% not_countries, ]$Country[1:5]
+sum_df = sum_df[!sum_df$Country %in% not_countries, ][1:5, ]
+row.names(sum_df) <- NULL
+cat("The top 5 countries for TWh Coal production")
+print(sum_df)
+
+#---------------------------
+#4 - for the 5 top Countries, create a plot of production as a function of time
+
+coal_top_5 = coal_[coal_$Entity %in% top_5, ]
+
+
+plot <- ggplot(coal_top_5, aes(x=Year , y=CoalProdTWh)) + theme_linedraw()
+plot <- plot + ggtitle('Coal Production for Top5 countries over Years after 1970')
+plot <- plot + labs(x="Year", y="Coal Production [TWh]")
+plot <- plot +  geom_line(aes(color=Entity), lwd=1.1)
+plot <- plot + theme(plot.title = element_text(size=12), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12)) 
+plot
+#---------------------------
+#5 - generate a plot with the cumulative sum of the World’s coal
+#     production over the years
+
+library(dplyr)
+
+world_prod <- filter(coal_, coal_$Entity == 'World')
+world_cumsum <- unlist(cumsum(world_prod[,"CoalProdTWh"]))
+world_prod['CumulatSum'] <- world_cumsum
+
+
+
+plot <- ggplot(world_prod, aes(x = Year, y=world_cumsum)) + theme_linedraw()
+plot <- plot + ggtitle('World cumulative coal production over time')
+plot <- plot + labs(x="Year", y="Coal Production [TWh]")
+plot <- plot + geom_line(lwd=1.5, color="darkgreen")
+plot <- plot + theme(plot.title = element_text(size=12), 
+                  axis.text.x = element_text(size=10), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12)) 
+plot     
+
+```
+
+---------------------------------------------------------------------------------
+
+**Exercise 4 - Covid19 Vaccine Data**
+
+
+• Data on Covid-19 vaccine can be found on.
+• The file vaccinationsby-manufacturer.csv,
+(https://github.com/owid/covid-19-data) contains a summary
+on the vaccination data grouped by Vaccine type and Country.
+
+1 filter() the original tibble by selecting the following countries: Italy
+
+2 plot the number of vaccines given as a function of time for the 
+different vaccine manufacturer
+
+3 from the same tibble plot the total number of vaccines shot per day in Italy
+
+4 do the same exercise for the following countries: Germany and United States of America
+
+
+```{r fig.align="center", fig.width=8 , fig.height=5}
+library(tibble)
+library(dplyr)
+ 
+cov_data <- tibble(read.csv('Data/covid.csv'))
+cov_data$date <- as.Date(cov_data$date)  # convert date column as date type
+
+#1 - filter() the original tibble by selecting the following countries: Italy
+cov_ita <- filter(cov_data, cov_data$location == 'Italy')
+print(head(cov_ita))
+#------------------
+#2 - plot the number of vaccines given as a function of time for the different vaccine manufacturer
+
+library(ggplot2)
+
+plot <- ggplot(cov_ita, aes(x=date , y=total_vaccinations , color = vaccine))
+plot <- plot + theme_linedraw() + ggtitle('Number of Vaccines given vs Time - Italy')
+plot <- plot + labs(x="Date", y="Number of Vaccines given")
+plot <- plot + theme(plot.title = element_text(size=16), 
+            axis.text.x = element_text(size=10, angle = 60, hjust = 1), 
+            axis.text.y = element_text(size=10),
+            axis.title.x = element_text(size=12),
+            axis.title.y = element_text(size=12)) + scale_x_date(date_breaks = "1 months",date_labels="%b-%y")                                                               + scale_y_continuous(trans='log10') + 
+                                                                                geom_line(lwd = 1.1)
+plot
+
+#------------------
+#3 - from the same tibble plot the total number of vaccines shot per day in Italy
+
+vaccines_per_day <- rep(0, length(unique(cov_ita$date)))
+for (i in 1:length(unique(cov_ita$date))){
+    date_ = unique(cov_ita$date)[[i]]
+    for (vaccine_ in unique(cov_ita$vaccine)){
+        current_shots  = filter(cov_ita, date==date_ & vaccine==vaccine_)
+        previous_shots = filter(cov_ita, date==(date_-1) & vaccine==vaccine_)
+        if (dim(current_shots)[1]!=0){
+            if (dim(previous_shots)[1]!=0){
+                vaccines_per_day[i] <- vaccines_per_day[i] + current_shots$total_vaccinations - previous_shots$total_vaccinations
+            }
+        }
+    }
+}
+
+
+plot2 <- ggplot()
+plot2 <- plot2 + theme_linedraw() + ggtitle('Total Number of Vaccines given per day vs Time - Italy')
+plot2 <- plot2 + labs(x="Date", y="Number of Vaccines given")
+plot2 <- plot2 + theme(plot.title = element_text(size=16), 
+              axis.text.x = element_text(size=10, angle = 60, hjust = 1), 
+              axis.text.y = element_text(size=10),
+              axis.title.x = element_text(size=12),
+              axis.title.y = element_text(size=12)) + scale_x_date(date_breaks = "1 months",date_labels="%b-%y")+                   geom_line(aes(x=unique(cov_ita$date) , y=vaccines_per_day), lwd = 1.1 , color='red')
+plot2
+
+
+
+
+
+```
+```{r  fig.align="center", fig.width=8 , fig.height=5}
+
+#------------------
+#4 - do the same exercise for Germany 
+
+library(tibble)
+library(dplyr)
+library(ggplot2)
+
+cov_ger <- filter(cov_data, cov_data$location == 'Germany')
+
+plot <- ggplot(cov_ger, aes(x=date , y=total_vaccinations , color = vaccine))
+plot <- plot + theme_linedraw() + ggtitle('Number of Vaccines given vs Time - Germany')
+plot <- plot + labs(x="Date", y="Number of Vaccines given")
+plot <- plot + theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10, angle = 60, hjust = 1), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12)) + scale_x_date(date_breaks = "1 months",date_labels="%b-%y") + scale_y_continuous(trans='log10') + geom_line(lwd = 1.1)
+plot
+
+#no problems in data
+total_vaccines_per_day <- aggregate(cov_ger$total_vaccinations, list(cov_ger$date),sum)[[2]]
+vaccines_per_day <- diff(total_vaccines_per_day)      
+
+plot2 <- ggplot()
+plot2 <- plot2 + theme_linedraw() + ggtitle('Total Number of Vaccines given per day vs Time - Germany')
+plot2 <- plot2 + labs(x="Date", y="Number of Vaccines given")
+plot2 <- plot2 + theme(plot.title = element_text(size=16), 
+              axis.text.x = element_text(size=10, angle = 60, hjust = 1), 
+              axis.text.y = element_text(size=10),
+              axis.title.x = element_text(size=12),
+              axis.title.y = element_text(size=12)) + scale_x_date(date_breaks = "1 months",date_labels="%b-%y")+                   geom_line( aes(x=unique(cov_ger$date)[-1] , y=vaccines_per_day), lwd = 1.1 , color='steelblue')
+plot2
+
+```
+
+
+```{r fig.align="center", fig.width=8 , fig.height=5}
+#------------------
+#4 - do the same exercise for the United States of America
+
+library(tibble)
+library(dplyr)
+library(ggplot2)
+
+cov_usa <- filter(cov_data, cov_data$location == 'United States')
+
+plot <- ggplot(cov_usa, aes(x=date , y=total_vaccinations , color = vaccine))
+plot <- plot + theme_linedraw() + ggtitle('Number of Vaccines given vs Time - United States')
+plot <- plot + labs(x="Date", y="Number of Vaccines given")
+plot <- plot + theme(plot.title = element_text(size=16), 
+              axis.text.x = element_text(size=10, angle = 60, hjust = 1), 
+              axis.text.y = element_text(size=10),
+              axis.title.x = element_text(size=12),
+              axis.title.y = element_text(size=12)) + scale_x_date(date_breaks = "1 months",date_labels="%b-%y")                      + scale_y_continuous(trans='log10') + geom_line(lwd = 1.1)
+
+plot
+
+#no problems in data??
+total_vaccines_per_day <- aggregate(cov_usa$total_vaccinations, list(cov_usa$date),sum)[[2]]
+vaccines_per_day <- diff(total_vaccines_per_day)      
+
+plot2 <- ggplot()
+plot2 <- plot2 + theme_linedraw() + ggtitle('Total Number of Vaccines given per day vs Time - United States')
+plot2 <- plot2 + labs(x="Date", y="Number of Vaccines given")
+plot2 <- plot2 + theme(plot.title = element_text(size=16), 
+            axis.text.x = element_text(size=10, angle = 60, hjust = 1), 
+            axis.text.y = element_text(size=10),
+            axis.title.x = element_text(size=12),
+            axis.title.y = element_text(size=12)) + scale_x_date(date_breaks = "1 months",date_labels="%b-%y")+                   geom_line( aes(x=unique(cov_usa$date)[-1] , y=vaccines_per_day), lwd = 1.1 , color='steelblue')
+plot2
+
+
+```
+Observing these plots there is a problem in the data: around March 2022
+the registered number of vaccines given of Johnson&Johnson leads to a 
+negative difference in the Total number of vaccines given... 
+Try to adjust this...
+
+
+```{r fig.align="center", fig.width=8 , fig.height=5}
+
+library(tibble)
+library(dplyr)
+library(ggplot2)
+
+df <- cov_usa[cov_usa$date > as.Date("2022-03-01"), ]
+for (i in 1:length(df$date)){
+    if(df[[i, "total_vaccinations"]] < mean(df[df$vaccine == "Johnson&Johnson", ]$total_vaccinations)){
+        date_ = df[[i, "date"]]
+        }
+}
+
+# fix the error replacing the bad record with it previous value
+
+bad_record <- which(cov_usa$date == date_ & cov_usa$vaccine == "Johnson&Johnson")
+cov_usa[bad_record, ] <- cov_usa[cov_usa$date == date_-1 & cov_usa$vaccine == "Johnson&Johnson", ]
+
+
+# filter to repair eventual differences
+difference_filter <- function(difference){
+    for (i in 1:length(difference)){
+        if (difference[i]<0){
+            difference[i]=0
+        }
+        if (difference[i]>10*mean(difference)){
+            difference[i]=0
+        }
+    }
+    return(difference)
+}
+
+
+plot <- ggplot(cov_usa, aes(x=date , y=total_vaccinations , color = vaccine))
+plot <- plot + theme_linedraw() + ggtitle('Number of Vaccines given vs Time - United States')
+plot <- plot + labs(x="Date", y="Number of Vaccines given")
+plot <- plot + theme(plot.title = element_text(size=16), 
+                  axis.text.x = element_text(size=10, angle = 60, hjust = 1), 
+                  axis.text.y = element_text(size=10),
+                  axis.title.x = element_text(size=12),
+                  axis.title.y = element_text(size=12)) + scale_x_date(date_breaks = "1 months",date_labels="%b-%y")                      + scale_y_continuous(trans='log10') + geom_line(lwd = 1.1)
+
+plot
+
+
+total_vaccines_per_day <- aggregate(cov_usa$total_vaccinations, list(cov_usa$date),sum)[[2]]
+vaccines_per_day <- difference_filter(diff(total_vaccines_per_day))      
+
+plot2 <- ggplot()
+plot2 <- plot2 + theme_linedraw() + ggtitle('Total Number of Vaccines given per day vs Time - United States')
+plot2 <- plot2 + labs(x="Date", y="Number of Vaccines given")
+plot2 <- plot2 + theme(plot.title = element_text(size=16), 
+              axis.text.x = element_text(size=10, angle = 60, hjust = 1), 
+              axis.text.y = element_text(size=10),
+              axis.title.x = element_text(size=12),
+              axis.title.y = element_text(size=12)) + scale_x_date(date_breaks = "1 months",date_labels="%b-%y")+                   geom_line( aes(x=unique(cov_usa$date)[-1] , y=vaccines_per_day), lwd = 1.1 , color='firebrick')
+plot2
+
+```
+
+• The file vaccinations.csv contains country-by-country data on global COVID-19
+vaccinations. The dataset includes some subnational locations 
+(England, Northern Ireland, Scotland, Wales, . . .) and international aggregates
+(World, continents, European Union ldots). 
+
+They can be identified by their iso code that starts with OWID
+
+1 selecting all the European countries in the tibble, plot the number 
+of daily vaccinations per million as a function of date
+
+
+```{r fig.align="center", fig.width=8 , fig.height=5}
+library(tibble)
+library(dplyr)
+library(ggplot2)
+
+vaccinations_data <- tibble(read.csv('Data/vaccinations.csv'))
+vaccinations_data$date <- as.Date(vaccinations_data$date)  # convert date column as date type
+
+tail(vaccinations_data)
+
+#1 selecting all the European countries in the tibble, plot the number 
+#of daily vaccinations per million as a function of date
+european_vac_df <- vaccinations_data[vaccinations_data$iso_code == "OWID_EUR" ,]
+
+total_vaccines_per_day <- aggregate(european_vac_df$daily_vaccinations_per_million, list(european_vac_df$date), sum)
+
+plot <- ggplot()
+plot <- plot + theme_linedraw() + ggtitle('Daily Vaccination given per milion vs Time - Europe')
+plot <- plot + labs(x="Date", y="Number of Daily Vaccines per milion")
+plot <- plot + theme(plot.title = element_text(size=16), 
+              axis.text.x = element_text(size=10, angle = 60, hjust = 1), 
+              axis.text.y = element_text(size=10),
+              axis.title.x = element_text(size=12),
+              axis.title.y = element_text(size=12)) + scale_x_date(date_breaks = "1 months",date_labels="%b-%y")+                   geom_line( aes(x=european_vac_df$date , y=european_vac_df$daily_vaccinations_per_million), lwd = 1.1 , color='darkorange2')
+plot
+
+
+```
+
+2 study the data structure and produce few relevant plots of your taste
+
+```{r fig.align="center", fig.width=8 , fig.height=6}
+colnames(vaccinations_data) #exploring
+
+entities <- c("Europe", "Asia", "Africa", "North America", "South America", "Australia", "Italy")
+vacc_df_locations <- vaccinations_data[vaccinations_data$location %in% entities, ]
+
+library(ggplot2)
+
+
+plot <- ggplot(data=vacc_df_locations)
+plot <- plot + theme_linedraw() + ggtitle('People Vaccinated per Hundred vs Time - Different Locations')
+plot <- plot + labs(x="Date", y="People Vaccinated per Hundred")
+plot <- plot + theme(plot.title = element_text(size=16), 
+              axis.text.x = element_text(size=10, angle = 60, hjust = 1), 
+              axis.text.y = element_text(size=10),
+              axis.title.x = element_text(size=12),
+              axis.title.y = element_text(size=12)) + scale_x_date(date_breaks = "1 months",date_labels="%b-%y")+                   geom_line( aes(x=date , y=people_vaccinated_per_hundred , color =location), lwd = 1.1)
+plot
+
+
+
+plot <- ggplot(data=vacc_df_locations)
+plot <- plot + theme_linedraw() + ggtitle('People Fully Vaccinated per Hundred vs Time - Different Locations')
+plot <- plot + labs(x="Date", y="People Fully Vaccinated per Hundred")
+plot <- plot + theme(plot.title = element_text(size=16), 
+              axis.text.x = element_text(size=10, angle = 60, hjust = 1), 
+              axis.text.y = element_text(size=10),
+              axis.title.x = element_text(size=12),
+              axis.title.y = element_text(size=12)) + scale_x_date(date_breaks = "1 months",date_labels="%b-%y")+                   geom_line( aes(x=date , y=people_fully_vaccinated_per_hundred , color =location), lwd = 1.1)
+plot
+
+
+
+```
+From the official global database WHO-COVID-19-global-data.csv, try to analyse the effectiveness of vaccines in Italy
+
+
+```{r fig.align="center", fig.width=15 , fig.height=6}
+library(tibble)
+library(dplyr)
+library(ggplot2)
+
+glob_covid_df = tibble(read.csv("Data/WHO-COVID-19-global-data.csv"))
+
+# convert date column as date type
+glob_covid_df$Date_reported = as.Date(glob_covid_df$Date_reported)
+
+tail(glob_covid_df)
+
+# selecting Italy
+covid_df.italy = glob_covid_df[glob_covid_df$Country =="Italy", ]
+vaccinations_df.italy = vaccinations_data[vaccinations_data$location == "Italy", ]
+
+
+upper_y = 250000
+cols    = c("new_cases"="firebrick2", "people_vaccinated_per_hundred"="steelblue4")
+plot <- ggplot() +   
+     theme_linedraw() +  
+     # new cases line                                          
+     geom_line(data=covid_df.italy,
+               aes(x=Date_reported, y=New_cases, colour="new_cases"),
+               lwd=1.1) +
+     # people vaccinated line 
+     geom_line(data=vaccinations_df.italy,
+               aes(x=date, y=people_vaccinated_per_hundred*upper_y/100, colour="people_vaccinated_per_hundred"),
+               lwd=1.2) +         
+
+     xlab("date") +
+     ggtitle("New cases & People vaccinated vs time - Italy") +
+     theme(plot.title = element_text(size=14 , hjust = 0.5),
+           axis.text.x = element_text(size=10, angle = 60, hjust = 1)) +
+     scale_x_date(date_breaks = "1 months", date_labels="%b-%y") +
+     scale_color_manual(name="Legend",
+                        values=cols) +
+    
+     theme(axis.text.y = element_text(size=10),
+             axis.title.x = element_text(size=12),
+              axis.title.y = element_text(size=12)) 
+     
+    # adjusting y axis
+     scale_y_continuous(
+           name = "New cases",
+           limits = c(0, upper_y),
+          sec.axis = sec_axis(~.*100/upper_y, name="People vaccinated per hunderd")) 
+
+plot
+```
+The new cases are completely uncorrelated to the vaccinated people.   
+Even if the vaccinated people increased, indeed, the new cases do not decrease.
+The vaccines do not prevent infections and transmissions...
+
+```{r fig.align="center", fig.width=15 , fig.height=6}
+upper_y = 1000
+
+
+cols    = c("new_deaths"="firebrick2", "people_vaccinated_per_hundred"="steelblue4")
+
+p1 <- ggplot() +   
+     theme_linedraw() +  
+     # new cases line                                          
+     geom_line(data=covid_df.italy,
+               aes(x=Date_reported, y=New_deaths, colour="new_deaths"),
+               lwd=1.5) +
+     # people vaccinated line 
+     geom_line(data=vaccinations_df.italy,
+               aes(x=date, y=people_vaccinated_per_hundred*upper_y/100, colour="people_vaccinated_per_hundred"),
+               lwd=1.5) +         
+     xlab("date") +
+     ggtitle("New deaths & People vaccinated vs time - Italy") +
+     theme(plot.title = element_text(size=14 , hjust = 0.5),
+           axis.text.x = element_text(size=10 , angle = 60, hjust = 1)) +
+     scale_x_date(date_breaks = "1 months", date_labels="%b-%y") +
+     scale_color_manual(name="Legend",
+                        values=cols) +
+    
+        
+     theme(axis.text.y = element_text(size=10),
+             axis.title.x = element_text(size=12),
+              axis.title.y = element_text(size=12)) +
+      
+    
+     # adjusting y axis
+     scale_y_continuous(
+           name = "New deaths",
+           limits = c(0, upper_y),
+           sec.axis = sec_axis(~.*100/upper_y, name="People vaccinated per hunderd")) 
+
+p1
+
+```
+Otherwise the number of vaccinated people and the deaths by Covid-19 are 
+strictly related, from this plot in fact one can see that when people start to
+vaccinated largely, the number of new deaths enormously decreases.
+
