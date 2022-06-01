@@ -1,3 +1,12 @@
+
+
+
+
+
+
+
+
+
 # Advanced Statistic For Physical Analysis - Exercises
 Below you can find all the exercises carried out during the course. To download them in Rmd format, follow the link to the GitHub repository.
 * [Exercises R Laboratory 01](./R_Lab_1/Lazzari_Andrea_RLab1.nb.html) <br>
