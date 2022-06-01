@@ -1,37 +1,30 @@
-## Welcome to GitHub Pages
-
-You can use the [editor on GitHub](https://github.com/AndreaLazzari/AdvancedStatisticForPhysicalAnalysis/edit/main/docs/index.md) to maintain and preview the content for your website in Markdown files.
-
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
-
-### Markdown
-
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [Basic writing and formatting syntax](https://docs.github.com/en/github/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/AndreaLazzari/AdvancedStatisticForPhysicalAnalysis/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+# Advanced Statistic For Physical Analysis - Exercises
+Below you can find all the exercises carried out during the course. To download them in Rmd format, follow the link to the GitHub repository.
+* [Exercises R Laboratory 01](./R_Lab_1/Lazzari_Andrea_RLab1.nb.html) <br>
+  First exercises in R to become familiar with the syntax and to start writing some basic instructions. In particular, the last one consists of a brief analysis of Covid-19 Vaccine data.
+  
+* [Exercises R Laboratory 02](./R_Lab_2/Lazzari_Andrea_RLab2.nb.html)
+  * Review of basic probability concepts
+  * Probability distributions in R
+  
+* [Exercises R Laboratory 03](./R_Lab_3/Lazzari_Andrea_RLab3.nb.html)
+  * Random numbers generation
+  * Markov’s inequality
+  * Chebyshev’s inequality
+  * The Six Boxes Toy Model: inference and simulation - Done with Jupyter Notebook
+  
+* [Exercises R Laboratory 04](./R_Lab_4/Lazzari_Andrea_RLab4.nb.html)
+  * Community Mobility Open Data (analysis of Covid-19 data sets)
+  * Random number generation using the _middle square algorithm_
+  * Bayesian Inference
+  
+* [Exercises R Laboratory 05](./R_Lab_5/Lazzari_Andrea_RLab5.nb.html)
+  * Bayesian inference for a Poisson process
+  * The Lighthouse problem
+  * Signal over Background
+  
+* [Exercises R Laboratory 06](./R_Lab_6/Lazzari_Andrea_RLab6.nb.html)
+  * Bayesian computation of posterior probability
+  * Frequentist and Bayesian estimator
+  * Hypotesis Testing
+  * MCMC with JAGS (Just Another Gibbs Sampler)
