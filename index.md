@@ -25,7 +25,7 @@ Below you can find all the exercises carried out during the course. To download 
   * The Lighthouse problem
   * Signal over Background
   
-* [Exercises R Laboratory 06](./R_Lab_6/Lazzari_Andrea_R_Lab6.nb.html)
+* [Exercises R Laboratory 06](./R_Lab_6/LazzariAndrea_R_Lab6.nb.html)
   * Bayesian computation of posterior probability
   * Frequentist and Bayesian estimator
   * Hypotesis Testing
