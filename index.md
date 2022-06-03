@@ -13,7 +13,7 @@ Below you can find all the exercises carried out during the course. To download 
   * Random numbers generation
   * Markov’s inequality
   * Chebyshev’s inequality
-  * The Six Boxes Toy Model: inference and simulation - Done with Jupyter Notebook
+  * The Six Boxes Toy Model: inference and simulation - Done with Jupyter Notebook (./R_Lab_3/Ex4-5_RandomBoxes.ipynb)
   
 * [Exercises R Laboratory 04](./R_Lab_4/Lazzari_AndreaRLab4.nb.html)
   * Community Mobility Open Data (analysis of Covid-19 data sets)
@@ -25,7 +25,7 @@ Below you can find all the exercises carried out during the course. To download 
   * The Lighthouse problem
   * Signal over Background
   
-* [Exercises R Laboratory 06](./R_Lab_6/Lazzari_Andrea_R_Lab6.nb.html)
+* [Exercises R Laboratory 06](./R_Lab_6/LazzariAndrea_R_Lab6.nb.html)
   * Bayesian computation of posterior probability
   * Frequentist and Bayesian estimator
   * Hypotesis Testing
