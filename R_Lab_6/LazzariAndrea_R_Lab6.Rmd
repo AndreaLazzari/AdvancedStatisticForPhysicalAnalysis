@@ -113,7 +113,7 @@ plot <- ggplot() + theme_linedraw() +
 
 plot
 ```
-Null Hypotesis that the probability of failing in the detection of the disease is greater or equal than the one with the old method, i.e. 15%
+Null Hypothesis that the probability of failing in the detection of the disease is greater or equal than the one with the old method, i.e. 15%
 
 ```{r fig.align="center",fig.width=10 , fig.height=6}
 plot <- ggplot() + theme_linedraw() +
@@ -138,9 +138,9 @@ prob <- integrate(posterior, lower=0.15,upper = 1)
 cat("The zone of interest corresponds to a Probability of", round(prob$value ,4))
 
 if(prob$value < 0.05){
-  cat("The value of the integral is smaller than the alpha level of significance (5%), so we reject the null hypotesis")
+  cat("The value of the integral is smaller than the alpha level of significance (5%), so we reject the null hypothesis")
 } else{
-  cat("The value of the integral is greater than the alpha level of significance (5%), so we can not reject the null hypotesis")
+  cat("The value of the integral is greater than the alpha level of significance (5%), so we can not reject the null hypothesis")
 }
 
 
@@ -179,9 +179,9 @@ p_val <- pbinom(6, size=n_sample, prob=p_null)
 
 cat("The calculated p-value is -->", round(p_val,4))
 if(p_val < 0.05){
-  cat("The p-value is smaller than the alpha level of significance (5%), so we reject the null hypotesis")
+  cat("The p-value is smaller than the alpha level of significance (5%), so we reject the null hypothesis")
 } else{
-  cat("The p-value is greater than the alpha level of significance (5%), so we can not reject the null hypotesis")
+  cat("The p-value is greater than the alpha level of significance (5%), so we can not reject the null hypothesis")
 }
 
 ```
@@ -376,7 +376,7 @@ and a 95% credible interval
 The bayesian estimator is the Posterior Mean
 $$ \hat{p}_B = \frac{\alpha'}{\alpha' + \beta'} \approx 0.0945$$
 
-(d) test the hypotesis : $H_0: p = 0.1$ versus $H1 : p \neq 0.1$
+(d) test the hypothesis : $H_0: p = 0.1$ versus $H1 : p \neq 0.1$
 at 5% level of significance with both the frequentist and bayesian approach
 
 • a new measurement, performed one month later on n = 165 water samples, 
@@ -404,7 +404,7 @@ $$ \hat{p}_B = \frac{\alpha'}{\alpha' + \beta'} \approx 0.0568$$
 In the case of Beta(12,115) as prior:
 $$ \hat{p}_B = \frac{\alpha''}{\alpha'' + \beta''} \approx 0.0712$$
 
-(h) test the hypotesis : $H_0: p = 0.1$ versus $H1 : p \neq 0.1$
+(h) test the hypothesis : $H_0: p = 0.1$ versus $H1 : p \neq 0.1$
 at 5% level of significance with both the frequentist and bayesian approach
 
 ```{r fig.align="center",fig.width=10 , fig.height=6}
@@ -501,9 +501,9 @@ cat("The Probability of the Null Hypothesis lies in the 95% CI ( (1 - alpha) * 1
 cat("In fact the zone of interest corresponds to a Probability of", round(prob$value ,4))
 
 if(prob$value < 0.05){
-  cat("The value of the integral is smaller than the alpha level of significance (5%), so we reject the null hypotesis")
+  cat("The value of the integral is smaller than the alpha level of significance (5%), so we reject the null hypothesis")
 } else{
-  cat("The value of the integral is greater than the alpha level of significance (5%), so we can not reject the null hypotesis")
+  cat("The value of the integral is greater than the alpha level of significance (5%), so we can not reject the null hypothesis")
 }
 ```
 
@@ -543,9 +543,9 @@ cat("The calculated p-value is -->", round(p_val,4))
 
 
 if(p_val < 0.05){
-  cat("The p-value is smaller than the alpha level of significance (5%), so we reject the null hypotesis")
+  cat("The p-value is smaller than the alpha level of significance (5%), so we reject the null hypothesis")
 } else{
-  cat("The p-value is greater than the alpha level of significance (5%), so we can not reject the null hypotesis")
+  cat("The p-value is greater than the alpha level of significance (5%), so we can not reject the null hypothesis")
 }
 ```
 ```{r fig.align="center",fig.width=12 , fig.height=7}
@@ -670,9 +670,9 @@ p_val <- pbinom(9,n_sample,p_null)+1-pbinom(n_sample-9-1, n_sample, p_null)
 cat("The calculated p-value is -->", round(p_val,4))
 
 if(p_val < 0.05){
-  cat("The p-value is smaller than the alpha level of significance (5%), so we reject the null hypotesis")
+  cat("The p-value is smaller than the alpha level of significance (5%), so we reject the null hypothesis")
 } else{
-  cat("The p-value is greater than the alpha level of significance (5%), so we can not reject the null hypotesis")
+  cat("The p-value is greater than the alpha level of significance (5%), so we can not reject the null hypothesis")
 }
 ```
 With the Bayesian approach, I evaluate if the $p_0=0.1$ lies in the 
@@ -759,6 +759,9 @@ The results are different between the two cases:
 mu_beta <- 0.15
 sigma_beta <- 0.14
 
+y_fail <- 6
+n_sample <- 75
+
 alpha_prior <- (-mu_beta*(sigma_beta^2 + mu_beta^2 - mu_beta))/(sigma_beta^2)
 beta_prior <- ((sigma_beta^2 + mu_beta^2 - mu_beta)*(mu_beta -1))/(sigma_beta^2)
 
@@ -769,8 +772,7 @@ posterior <- function(x){
   dbeta(x, alpha_posterior, beta_posterior)
 }
 
-y_fail <- 6
-n_sample <- 75
+
 data_obs <- rep(c(1,0), c(y_fail, n_sample-y_fail) )
 
 data <- NULL
@@ -1016,14 +1018,6 @@ plot <- ggplot() + theme_linedraw() +
 plot
 
 ```
-```{r}
-
-plot(unname(autocorr(chain, lags=c(1:50))[[1]]))
-
-```
-
-
-
 ```{r}
 stat_values <- s$statistics
 
