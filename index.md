@@ -13,7 +13,7 @@ Below you can find all the exercises carried out during the course. To download 
   * Random numbers generation
   * Markov’s inequality
   * Chebyshev’s inequality
-  * The Six Boxes Toy Model: inference and simulation - Done with Jupyter Notebook (./R_Lab_3/Ex4-5_RandomBoxes.ipynb)
+  * The Six Boxes Toy Model: inference and simulation - Done with Jupyter Notebook [RandomBoxes](./R_Lab_3/Ex4-5_RandomBoxes.ipynb)
   
 * [Exercises R Laboratory 04](./R_Lab_4/Lazzari_AndreaRLab4.nb.html)
   * Community Mobility Open Data (analysis of Covid-19 data sets)
